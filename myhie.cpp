@@ -8,16 +8,77 @@ using namespace std;
 int main(int argc, char* args[]) {
 
 	string inputFile = "";
+	string workerNumStr = "";
+	string attrNumStr = "";
+	string outputFile = "";
+	int workerNum, attrNum;
+	bool randomRanges = false;
+	bool ascendingOrder = true; // If false, then we'll sort in a descending order, obviously
+
 	for(int i = 0; i < argc; i++) {
-		if (strcmp(args[i], "-i") == 0) { // Parameter parsing code adapted from my mvote program
+		if(strcmp(args[i], "-i") == 0) { // Parameter parsing code adapted from my mvote program, except we have many more params here
 			inputFile = args[i+1];
 		}
+		else if(strcmp(args[i], "-k") == 0) {
+			workerNumStr = args[i+1];
+			workerNum = stoi(workerNumStr); // We take the variable outside the loop with this
+		}
+		else if(strcmp(args[i], "-r") == 0) {
+			randomRanges = true;
+		}
+		else if(strcmp(args[i], "-a") == 0) {
+			attrNumStr = args[i+1];
+			attrNum = stoi(attrNumStr);
+			if(attrNum != 0 && attrNum != 3 && attrNum != 4 && attrNum != 5) { // Catch any invalid (read: non-numerical) input right here
+				cerr << "Error: invalid sorting attribute. Please specify a numerical column." << endl;
+				return -1;
+			}
+		}
+		else if(strcmp(args[i], "-o") == 0) {
+			if(strcmp(args[i+1], "d") == 0) { // That's all we need to check as we set the boolean to true by default
+				ascendingOrder = false;
+			}
+		}
+		else if(strcmp(args[i], "-s") == 0) {
+			outputFile = args[i+1];
+		}
 	}
+
 
 	if(inputFile == "") { // We need something to open!
 		cerr << "Please specify an input file." << endl;
 		return -1;
 	}
+
+	// Construct and print a neat little program configuration based on the command line parametres
+	cout << "PROGRAM SETTINGS" << endl << "Input file: " << inputFile << endl << "Output file: " << outputFile << endl << "Number of sorters: " << workerNum << endl << "Attribute to sort by: ";
+	if(attrNum == 0) {
+		cout << "Resident ID" << endl;
+	}
+	else if(attrNum == 3) {
+		cout << "Number of dependents" << endl;
+	}
+	else if(attrNum == 4) {
+		cout << "Income" << endl;
+	}
+	else {
+		cout << "Zip code" << endl;
+	}
+
+	if(randomRanges == true) {
+		cout << "Random ranges: Yes" << endl;
+	}
+	else {
+		cout << "Random ranges: No" << endl;
+	}
+
+	if(ascendingOrder == false) {
+		cout << "Sorting order: Descending" << endl;
+	}
+	else {
+		cout << "Sorting order: Ascending" << endl;
+	}
+	cout << "\n" << endl;
 
 	string line;
 	ifstream fin;
