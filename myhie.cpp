@@ -114,56 +114,81 @@ int main(int argc, char* args[]) {
 		int zip;		
 	};
 
-	int rid, dep, zip;
-	float income;
-	string firstName, lastName;
-
+	string line;
 	int lineCount = 0;
-	while (fin >> rid >> firstName >> lastName >> dep >> income >> zip) { // Measure length of the file, essential to creating our data array
+	while(getline(fin, line)) { // Measure length of the file, essential to creating our data array
 		lineCount++;
 	}
 	fin.close();
+	cout << "File has " << lineCount << " lines." << endl;
 
 	fin.open(inputFile); // Opening it again to reset the file reader to the top
 
 	int i = 0;
-	lineCount = 1000;
 	Taxpayer dataSet[lineCount]; // Array of Taxpayer structs, this is what we'll slice up and pass to all our sorters
 
-	string line;
-	int readVar; // Which variable we're currently trying to assemble
+	int readVar = 0; // Which variable we're currently trying to assemble
+	int j = 0; // Used to iterate over the Taxpayer array since we're using a while loop
 	while(getline(fin, line)) { // The random number of spaces between variables is very problematic in trying to parse file input, so we have to construct our strings carefully
-		cout << line << endl;
-		string rid = "";
+
+		// Initialising everything to strings initially to enable the upcoming heuristic parsing; will convert into proper types afterwards
+		string ridStr = "";
+		string firstName = "";
+		string lastName = "";
+		string depStr = "";
+		string incomeStr = "";
+		string zipStr = "";
 		for(int i = 0; i < line.length(); i++) {
-			if(line[i] != ' ') {
-				rid += line[i];
+			if(i != 0 && line[i] != ' ' && line[i-1] == ' ') { // We detect when a new variable arrives by looking ahead: if the current character is whitespace and the next one isn't, then we know that the next one is the start of the new variable, since all variables are separated by at least one whitespace
+				readVar++;
 			}
-			else {
-				cout << "Ran into space!" << endl;
-				break;
+			if(line[i] != ' ') { // Adding the actual (read: non whitespace) characters to the appropriate strings
+				if(readVar == 0) {
+					ridStr += line[i];
+				}
+				else if(readVar == 1) {
+					firstName += line[i];
+				}
+				else if(readVar == 2) {
+					lastName += line[i];
+				}
+				else if(readVar == 3) {
+					depStr += line[i];
+				}
+				else if(readVar == 4) {
+					incomeStr += line[i];
+				}
+				else if(readVar == 5) {
+					zipStr += line[i];
+				}
+			}
+			else { // Else, it's a useless space, so we can just ignore it
+				continue;
 			}
 		}
-		cout << rid << endl;
+		readVar = 0;
+
+		// Converting to appropriate types
+		int rid = stoi(ridStr); // A lovely C++11 function that replaces the less stable atoi()
+		int dep = stoi(depStr);
+		int zip = stoi(zipStr);
+		float income = stof(incomeStr); // Ditto, for floats
+
+		// Finally filling up the appropriate struct in the array
+		dataSet[j].rid = rid;
+		dataSet[j].firstName = firstName;
+		dataSet[j].lastName = lastName;
+		dataSet[j].dep = dep;
+		dataSet[j].income = income;
+		dataSet[j].zip = zip;
+
+		j++;
 	}
 
-/*	while (fin >> rid >> firstName >> lastName >> dep >> income >> zip) { // As with the previous assignment, this syntax makes parsing easy - even easier, in fact, as we have strings instead of char arrays and don't have to bother with memory allocation
-		if(i > lineCount-1) { // Makes sure we don't go out of bounds
-			break;
-		}
-		dataSet[i].rid = rid; // The struct at each entry of the array is filled up with the data
-		dataSet[i].firstName = firstName;
-		dataSet[i].lastName = lastName;
-		dataSet[i].dep = dep;
-		dataSet[i].income = income;
-		dataSet[i].zip = zip;
-		i++;
-
-	}*/
 	fin.close();
 
 	for(unsigned int i = 0; i < sizeof(dataSet)/sizeof(dataSet[0]); i++) { // Print results of parsing
-		//cout << dataSet[i].rid << " " << dataSet[i].firstName << " " << dataSet[i].lastName << " " << dataSet[i].dep << " " << dataSet[i].income << " " << dataSet[i].zip << endl;
+		cout << dataSet[i].rid << " " << dataSet[i].firstName << " " << dataSet[i].lastName << " " << dataSet[i].dep << " " << dataSet[i].income << " " << dataSet[i].zip << endl;
 	}
 
 	return 0;
