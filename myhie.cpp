@@ -4,12 +4,13 @@
 #include <cstring> // For strcmp
 #include <cstdio>
 #include <cstdlib>
+#include <ctime> // For time-keeping (and random number generator seeding, believe it or not)
 #include <unistd.h>
 #include <sys/wait.h>
 
 using namespace std;
 
-static void showReturnStatus(pid_t childpid, int status)
+static void showReturnStatus(pid_t childpid, int status) // Diagnostic function taken from an OS lab
 {
 	if (WIFEXITED(status) && !WEXITSTATUS(status))
 		printf("Child %ld terminated normally\n", (long)childpid);
@@ -26,8 +27,9 @@ int main(int argc, char* args[]) {
 	string inputFile = "";
 	string workerNumStr = "";
 	string attrNumStr = "";
-	string outputFile = "";
-	int workerNum, attrNum;
+	string outputFile = "output.csv";
+	int workerNum = 5; // We set up some default values so that the program could technically run with only the input file as parameter
+	int attrNum = 0;
 	bool randomRanges = false;
 	bool ascendingOrder = true; // If false, then we'll sort in a descending order, obviously
 
@@ -39,7 +41,7 @@ int main(int argc, char* args[]) {
 			workerNumStr = args[i+1];
 			workerNum = stoi(workerNumStr); // We take the variable outside the loop with this
 		}
-		else if(strcmp(args[i], "-r") == 0) {
+		else if(strcmp(args[i], "-r") == 0) { // A simple flag with no parameter after it
 			randomRanges = true;
 		}
 		else if(strcmp(args[i], "-a") == 0) {
@@ -65,8 +67,6 @@ int main(int argc, char* args[]) {
 		cerr << "Please specify an input file." << endl;
 		return -1;
 	}
-
-	//execl("./execTest", "execTest", NULL);
 
 	// Construct and print a neat little program configuration based on the command line parametres
 	cout << "PROGRAM SETTINGS" << endl << "Input file: " << inputFile << endl << "Output file: " << outputFile << endl << "Number of sorters: " << workerNum << endl << "Attribute to sort by: ";
@@ -187,9 +187,84 @@ int main(int argc, char* args[]) {
 
 	fin.close();
 
-	for(unsigned int i = 0; i < sizeof(dataSet)/sizeof(dataSet[0]); i++) { // Print results of parsing
-		cout << dataSet[i].rid << " " << dataSet[i].firstName << " " << dataSet[i].lastName << " " << dataSet[i].dep << " " << dataSet[i].income << " " << dataSet[i].zip << endl;
+	// Creating the coordinator node and sending it info
+	int fd[2];
+	pid_t pid;
+	pid = fork(); // First we fork it
+	if(pid < 0) { // Error handling
+		cerr << "Error: could not start coordinator child process." << endl;
+		return -1;
+	} 
+	else if(pid == 0) { // PID == 0 means we're always in the child, here known as the coordinator node
+		int workerRanges[workerNum][2]; // 2D array with each entry corresponding to a worker with two ints in it: range start and range end
+		workerRanges[0][0] = 0;
+
+		if(randomRanges == true) { // Generating random ranges
+			int randNums[workerNum-1]; // We need one less number than the # of workers because the first worker always starts at 0
+			srand(time(0)); // Seed the generator based on current time; ensures that we always get new values
+
+			for(int i = 0; i < workerNum - 1; i++) { // Generate the numbers
+				randNums[i] = rand() % lineCount;
+			}
+
+			for(int i = 0; i < workerNum - 1; i++) { // After we have our random numbers, we have to do some sanity checking
+				srand(time(0));
+				while(randNums[i] == 0) { // No number can be 0, since 0 is already the start of worker #1
+					randNums[i] = rand() % lineCount;
+				}
+			}
+
+			cout << "Our random numbers are: ";
+			for(int i = 0; i < workerNum - 1; i++) {
+				cout << randNums[i] << " ";
+			}
+			cout << endl;
+
+			int currentMin = lineCount; // One higher than any of the possible random values we generated
+			int currentMinLoc = 0;
+			for(int i = 1; i < workerNum; i++) { // My trusty selection sort algorithm is deployed once again, this time to fill up a sorted array in ascending order!
+				for(int j = 0; j < workerNum -1; j++) {
+					if(randNums[j] < currentMin) {
+						currentMin = randNums[j];
+						currentMinLoc = j; // We save where we found the max value, so we can set it to 0 at the end of one iteration
+					}
+				}
+
+				workerRanges[i][0] = currentMin; // We start filling up the starting points of each worker node with the random variables in ascending order
+				randNums[currentMinLoc] = lineCount; // Makes sure we don't find it again
+				currentMin = lineCount;
+			}
+
+			srand(time(0)); // TO-DO: sanity check to ensure that no starting points match
+			for(int i = 0; i < workerNum; i++) { // Now that we have the starting points, we get the end points to ensure we cover all ground
+				if(i < workerNum - 1) { // Boundary check
+					if(workerRanges[i+1][0] - workerRanges[i][0] == 0) {
+						cerr << "Error: worker starting points match!" << endl;
+						return -1;
+					}
+					workerRanges[i][1] = workerRanges[i+1][0] - 1;
+				}
+				else { // The end point of the last worker is the end of the data array
+					workerRanges[i][1] = lineCount - 1;
+				}
+			}
+
+			for(int i = 0; i < workerNum; i++) {
+				cout << "Worker #" << i << " range is: " << workerRanges[i][0] << " - " << workerRanges[i][1] << endl;
+			}
+		}
+		else { // Splitting up the ranges equally
+		}
+
+	} 
+	else { // Parents waits for child to complete
+		wait(NULL);
+		cout << "Child process finished running." << endl;
 	}
+
+/*	for(unsigned int i = 0; i < sizeof(dataSet)/sizeof(dataSet[0]); i++) { // Print results of parsing
+		cout << dataSet[i].rid << " " << dataSet[i].firstName << " " << dataSet[i].lastName << " " << dataSet[i].dep << " " << dataSet[i].income << " " << dataSet[i].zip << endl;
+	}*/
 
 	return 0;
 
