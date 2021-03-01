@@ -248,13 +248,26 @@ int main(int argc, char* args[]) {
 					workerRanges[i][1] = lineCount - 1;
 				}
 			}
-
-			for(int i = 0; i < workerNum; i++) {
-				cout << "Worker #" << i << " range is: " << workerRanges[i][0] << " - " << workerRanges[i][1] << endl;
-			}
 		}
 		else { // Splitting up the ranges equally
+			// As it turns out, it doesn't matter if the range splits nicely (meaning lineCount % workerNum == 0) or not - we can just add whatever remainder there is to the last worker's lot in a special case
+			int range = lineCount / workerNum; // This is how many entries each worker will work on
+			for(int i = 0; i < workerNum; i++) {
+				workerRanges[i][0] = i*range; // The starting point is always just current worker number times the range
+
+				if(i == workerNum - 1) {  // The last worker range is handled specially, the rest have a simple formula
+					workerRanges[i][1] = lineCount - 1; // Its end is always set to the very last entry, meaning that it takes any extra remainders - what a hard worker!
+				}
+				else {
+					workerRanges[i][1] = (i+1)*range - 1; // The end point of a worker is the next worker's starting point minus one
+				}
+
+			}
 		}
+
+		for(int i = 0; i < workerNum; i++) {
+			cout << "Worker #" << i << " range is: " << workerRanges[i][0] << " - " << workerRanges[i][1] << endl;
+		}		
 
 	} 
 	else { // Parents waits for child to complete
