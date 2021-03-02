@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string> // Yay!
-#include <cstring> // For strcmp
+#include <cstring> // For strcmp and strcpy
 #include <cstdio>
 #include <cstdlib>
 #include <ctime> // For time-keeping (and random number generator seeding, believe it or not)
@@ -108,15 +108,6 @@ int main(int argc, char* args[]) {
 		return -1;
 	}
 
-	struct Taxpayer { // Struct that stores all our data - we don't need a class as you don't really modify this data, you just sort it
-		int rid;
-		string firstName;
-		string lastName;
-		int dep;
-		float income;
-		int zip;		
-	};
-
 	string line;
 	int lineCount = 0;
 	while(getline(fin, line)) { // Measure length of the file, essential to creating our data array
@@ -124,71 +115,6 @@ int main(int argc, char* args[]) {
 	}
 	fin.close();
 	cout << "File has " << lineCount << " lines." << endl;
-
-	fin.open(inputFile); // Opening it again to reset the file reader to the top
-
-	int i = 0;
-	Taxpayer dataSet[lineCount]; // Array of Taxpayer structs, this is what we'll slice up and pass to all our sorters
-
-	int readVar = 0; // Which variable we're currently trying to assemble
-	int j = 0; // Used to iterate over the Taxpayer array since we're using a while loop
-	while(getline(fin, line)) { // The random number of spaces between variables is very problematic in trying to parse file input, so we have to construct our strings carefully
-
-		// Initialising everything to strings initially to enable the upcoming heuristic parsing; will convert into proper types afterwards
-		string ridStr = "";
-		string firstName = "";
-		string lastName = "";
-		string depStr = "";
-		string incomeStr = "";
-		string zipStr = "";
-		for(int i = 0; i < line.length(); i++) {
-			if(i != 0 && line[i] != ' ' && line[i-1] == ' ') { // We detect when a new variable arrives by looking ahead: if the current character is whitespace and the next one isn't, then we know that the next one is the start of the new variable, since all variables are separated by at least one whitespace
-				readVar++;
-			}
-			if(line[i] != ' ') { // Adding the actual (read: non whitespace) characters to the appropriate strings
-				if(readVar == 0) {
-					ridStr += line[i];
-				}
-				else if(readVar == 1) {
-					firstName += line[i];
-				}
-				else if(readVar == 2) {
-					lastName += line[i];
-				}
-				else if(readVar == 3) {
-					depStr += line[i];
-				}
-				else if(readVar == 4) {
-					incomeStr += line[i];
-				}
-				else if(readVar == 5) {
-					zipStr += line[i];
-				}
-			}
-			else { // Else, it's a useless space, so we can just ignore it
-				continue;
-			}
-		}
-		readVar = 0;
-
-		// Converting to appropriate types
-		int rid = stoi(ridStr); // A lovely C++11 function that replaces the less stable atoi()
-		int dep = stoi(depStr);
-		int zip = stoi(zipStr);
-		float income = stof(incomeStr); // Ditto, for floats
-
-		// Finally filling up the appropriate struct in the array
-		dataSet[j].rid = rid;
-		dataSet[j].firstName = firstName;
-		dataSet[j].lastName = lastName;
-		dataSet[j].dep = dep;
-		dataSet[j].income = income;
-		dataSet[j].zip = zip;
-
-		j++;
-	}
-
-	fin.close();
 
 	// Creating the coordinator node and sending it info
 	int fd[2];
@@ -280,29 +206,28 @@ int main(int argc, char* args[]) {
 			cerr << "Error: could not start worker child process." << endl;
 			return -1;
 		} 
-		else if(pid == 0) { // Child, will read from pipe
+		else if(pid == 0) { // Worker child, we pass to it the file it needs to read and the specific ranges
 			cout << "Starting worker process" << endl;
-			execl("./worker", "worker", NULL);			
-		}
-		else { // Parent will write to pipe
-			char* myfifo = "myfifo";
-			if(mkfifo("myfifo" , 0777) == -1) {
-				if(errno != EEXIST) {
-					cerr << "Error: couldn't create myfifo pipe" << endl;
-					exit(-1);
-				}
-			}
+			string rangeStartStr = to_string(workerRanges[1][0]);
+			string rangeEndStr = to_string(workerRanges[1][1]);
+			string attrNumStr = to_string(attrNum);
 
-			int fd;
-			int rangeTest = workerRanges[0][0];
-			fd = open(myfifo, O_WRONLY);
-			write(fd, &workerNum, sizeof(workerNum));
-			for(int i = 0; i < workerNum; i++) {
-				write(fd, &workerRanges[i][0], sizeof(workerRanges[i][0]));
-				write(fd, &workerRanges[i][1], sizeof(workerRanges[i][1]));
-			}
-			
-			close(fd);
+			// Sadly, we're not free of char arrays in this program either - the exec command can't handle strings as parameters, so we have to go the old-fashioned way
+			char* inputFileChar = new char[30];
+			char* rangeStartChar = new char[30];
+			char* rangeEndChar = new char[30];
+			char* attrNumChar = new char[30];
+
+			// As hacky as this seems, this is genuinely the best way I found to convert an int to a char array (by first converting it to a string)
+			strcpy(inputFileChar, inputFile.c_str());
+			strcpy(rangeStartChar, rangeStartStr.c_str());
+			strcpy(rangeEndChar, rangeEndStr.c_str());
+			strcpy(attrNumChar, attrNumStr.c_str());
+
+			char *arg[] = {"worker",inputFileChar,rangeStartChar, rangeEndChar, attrNumChar, NULL}; 
+			execv("./worker", arg);			
+		}
+		else { // Parent will wait for worker to finish
 
 			wait(NULL);
 			cout << "Worker child finished running." << endl;
