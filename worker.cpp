@@ -18,11 +18,18 @@ int main(int argc, char* args[]) {
 		}
 	}
 
-	int rangeStart;
+	int workerNum;
 	int fd1;
 	fd1 = open(myfifo,O_RDONLY);
-	read(fd1, &rangeStart, sizeof(rangeStart));
-	cout << "Read from pipe: " << rangeStart << endl;
+	read(fd1, &workerNum, sizeof(workerNum));
+	cout << "Read from pipe: " << workerNum << endl;
+	int rangeStart, rangeEnd;
+	for(int i = 0; i < workerNum; i++) {
+		read(fd1, &rangeStart, sizeof(rangeStart));
+		read(fd1, &rangeEnd, sizeof(rangeEnd));
+		cout << "Range start and end for worker #" << i << ": " << rangeStart << "-" << rangeEnd << endl;
+	}	
+	close(fd1);
 
 	//string rangeStartStr, rangeEndStr, attrNumStr;
 

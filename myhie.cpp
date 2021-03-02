@@ -272,27 +272,49 @@ int main(int argc, char* args[]) {
 			cout << "Worker #" << i << " range is: " << workerRanges[i][0] << " - " << workerRanges[i][1] << endl;
 		}
 
-		// Creating pipe
-		char* myfifo = "myfifo";
-		if(mkfifo("myfifo" , 0777) == -1) {
-			if(errno != EEXIST) {
-				cerr << "Error: couldn't create myfifo pipe" << endl;
-				exit(-1);
+		// Creating worker child
+
+		pid_t pid;
+		pid = fork(); // First we fork it
+		if(pid < 0) { // Error handling
+			cerr << "Error: could not start worker child process." << endl;
+			return -1;
+		} 
+		else if(pid == 0) { // Child, will read from pipe
+			cout << "Starting worker process" << endl;
+			execl("./worker", "worker", NULL);			
+		}
+		else { // Parent will write to pipe
+			char* myfifo = "myfifo";
+			if(mkfifo("myfifo" , 0777) == -1) {
+				if(errno != EEXIST) {
+					cerr << "Error: couldn't create myfifo pipe" << endl;
+					exit(-1);
+				}
 			}
+
+			int fd;
+			int rangeTest = workerRanges[0][0];
+			fd = open(myfifo, O_WRONLY);
+			write(fd, &workerNum, sizeof(workerNum));
+			for(int i = 0; i < workerNum; i++) {
+				write(fd, &workerRanges[i][0], sizeof(workerRanges[i][0]));
+				write(fd, &workerRanges[i][1], sizeof(workerRanges[i][1]));
+			}
+			
+			close(fd);
+
+			wait(NULL);
+			cout << "Worker child finished running." << endl;
+
 		}
 
-		int fd;
-		fd = open(myfifo, O_WRONLY);
-		write(fd, &workerRanges[0][0], sizeof(workerRanges[0][0]));
-		close(fd);
 
-		cout << "Starting worker process" << endl;
-		execl("./worker", "worker", workerRanges[0][0], workerRanges[0][1], attrNum, NULL);
 
 	} 
 	else { // Parents waits for child to complete
 		wait(NULL);
-		cout << "Child process finished running." << endl;
+		cout << "Coord child finished running." << endl;
 	}
 
 /*	for(unsigned int i = 0; i < sizeof(dataSet)/sizeof(dataSet[0]); i++) { // Print results of parsing
