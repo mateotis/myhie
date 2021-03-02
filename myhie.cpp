@@ -7,6 +7,9 @@
 #include <ctime> // For time-keeping (and random number generator seeding, believe it or not)
 #include <unistd.h>
 #include <sys/wait.h>
+#include <fcntl.h>
+#include <sys/stat.h> 
+#include <sys/types.h> 
 
 using namespace std;
 
@@ -267,7 +270,24 @@ int main(int argc, char* args[]) {
 
 		for(int i = 0; i < workerNum; i++) {
 			cout << "Worker #" << i << " range is: " << workerRanges[i][0] << " - " << workerRanges[i][1] << endl;
-		}		
+		}
+
+		// Creating pipe
+		char* myfifo = "myfifo";
+		if(mkfifo("myfifo" , 0777) == -1) {
+			if(errno != EEXIST) {
+				cerr << "Error: couldn't create myfifo pipe" << endl;
+				exit(-1);
+			}
+		}
+
+		int fd;
+		fd = open(myfifo, O_WRONLY);
+		write(fd, &workerRanges[0][0], sizeof(workerRanges[0][0]));
+		close(fd);
+
+		cout << "Starting worker process" << endl;
+		execl("./worker", "worker", workerRanges[0][0], workerRanges[0][1], attrNum, NULL);
 
 	} 
 	else { // Parents waits for child to complete
