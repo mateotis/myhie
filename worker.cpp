@@ -19,30 +19,170 @@ struct Taxpayer { // Struct that stores all our data - we don't need a class as 
 	int zip;		
 };
 
-void insertionSort(Taxpayer dataSet[], int n) { // TO DO - adapt to all possible sorting attributes
+void insertionSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { // Insertion sort algorithm written from scratch - although it also has O(n^2) time complexity, to my mind it's intuitive and mostly easy to understand 
 	int insertPos;
 	Taxpayer currentEntry;
 
-	for(unsigned int i = 1; i < n; i++) {
-		insertPos = i; // Where we're going to insert
-		currentEntry = dataSet[i]; // What we're inserting
+	if(attrNum == 0) { // Sorting by RID
+		if(sortOrder == "ascending") {
+			cout << "in here" << endl;
 
-		while(insertPos > 0 && dataSet[insertPos-1].rid > currentEntry.rid) { // Move entry back as long as its RID is smaller than the previous entry's 
-			dataSet[insertPos] = dataSet[insertPos-1];
-			insertPos--;
+			for(int i = 1; i < n; i++) {
+				insertPos = i; // Where we're going to insert
+				currentEntry = dataSet[i]; // What we're inserting
 
+				while(insertPos > 0 && dataSet[insertPos-1].rid > currentEntry.rid) { // Move entry back as long as its RID is smaller than the previous entry's 
+					dataSet[insertPos] = dataSet[insertPos-1]; // Moving our entry back actually means moving what was previously there, forward - tricky, right?
+					insertPos--; // Keep going backwards until we find the spot
+
+				}
+
+				if(insertPos != i) { // If we're not already there, then finally insert the entry to its proper place in the array
+					dataSet[insertPos] = currentEntry; // This moves the whole struct, without having to move members separately, quite efficient
+				}
+				
+			}		
 		}
+		else { // Sort in descending order - essentially the same algorithm, just with a flipped relation check
 
-		if(insertPos != i) {
-			dataSet[insertPos] = currentEntry;
-		}
-		
+			for(int i = 1; i < n; i++) {
+				insertPos = i; // Where we're going to insert
+				currentEntry = dataSet[i]; // What we're inserting
+
+				while(insertPos > 0 && dataSet[insertPos-1].rid < currentEntry.rid) { // Move entry back as long as its RID is larger than the previous entry's 
+					dataSet[insertPos] = dataSet[insertPos-1];
+					insertPos--;
+
+				}
+
+				if(insertPos != i) {
+					dataSet[insertPos] = currentEntry;
+				}
+				
+			}		
+		}		
 	}
+	else if(attrNum == 3) { // By number of dependents
+		if(sortOrder == "ascending") {
+
+			for(int i = 1; i < n; i++) {
+				insertPos = i; // Where we're going to insert
+				currentEntry = dataSet[i]; // What we're inserting
+
+				while(insertPos > 0 && dataSet[insertPos-1].dep > currentEntry.dep) { // Move entry back as long as its number of dependents is smaller than the previous entry's 
+					dataSet[insertPos] = dataSet[insertPos-1]; // Moving our entry back actually means moving what was previously there, forward - tricky, right?
+					insertPos--; // Keep going backwards until we find the spot
+
+				}
+
+				if(insertPos != i) { // If we're not already there, then finally insert the entry to its proper place in the array
+					dataSet[insertPos] = currentEntry;
+				}
+				
+			}		
+		}
+		else { // Sort in descending order - essentially the same algorithm, just with a flipped relation check
+
+			for(int i = 1; i < n; i++) {
+				insertPos = i; // Where we're going to insert
+				currentEntry = dataSet[i]; // What we're inserting
+
+				while(insertPos > 0 && dataSet[insertPos-1].dep < currentEntry.dep) { // Move entry back as long as its number of dependents is larger than the previous entry's 
+					dataSet[insertPos] = dataSet[insertPos-1];
+					insertPos--;
+
+				}
+
+				if(insertPos != i) {
+					dataSet[insertPos] = currentEntry;
+				}
+				
+			}		
+		}		
+	}
+	else if(attrNum == 4) { // By income
+		if(sortOrder == "ascending") {
+
+			for(int i = 1; i < n; i++) {
+				insertPos = i; // Where we're going to insert
+				currentEntry = dataSet[i]; // What we're inserting
+
+				while(insertPos > 0 && dataSet[insertPos-1].income > currentEntry.income) { // Move entry back as long as its income is smaller than the previous entry's 
+					dataSet[insertPos] = dataSet[insertPos-1]; // Moving our entry back actually means moving what was previously there, forward - tricky, right?
+					insertPos--; // Keep going backwards until we find the spot
+
+				}
+
+				if(insertPos != i) { // If we're not already there, then finally insert the entry to its proper place in the array
+					dataSet[insertPos] = currentEntry;
+				}
+				
+			}		
+		}
+		else { // Sort in descending order - essentially the same algorithm, just with a flipped relation check
+
+			for(int i = 1; i < n; i++) {
+				insertPos = i; // Where we're going to insert
+				currentEntry = dataSet[i]; // What we're inserting
+
+				while(insertPos > 0 && dataSet[insertPos-1].income < currentEntry.income) { // Move entry back as long as its income is larger than the previous entry's 
+					dataSet[insertPos] = dataSet[insertPos-1];
+					insertPos--;
+
+				}
+
+				if(insertPos != i) {
+					dataSet[insertPos] = currentEntry;
+				}
+				
+			}		
+		}		
+	}
+	else if(attrNum == 5) { // By zip code
+		if(sortOrder == "ascending") {
+
+			for(int i = 1; i < n; i++) {
+				insertPos = i; // Where we're going to insert
+				currentEntry = dataSet[i]; // What we're inserting
+
+				while(insertPos > 0 && dataSet[insertPos-1].zip > currentEntry.zip) { // Move entry back as long as its zip code is smaller than the previous entry's 
+					dataSet[insertPos] = dataSet[insertPos-1]; // Moving our entry back actually means moving what was previously there, forward - tricky, right?
+					insertPos--; // Keep going backwards until we find the spot
+
+				}
+
+				if(insertPos != i) { // If we're not already there, then finally insert the entry to its proper place in the array
+					dataSet[insertPos] = currentEntry;
+				}
+				
+			}		
+		}
+		else { // Sort in descending order - essentially the same algorithm, just with a flipped relation check
+
+			for(int i = 1; i < n; i++) {
+				insertPos = i; // Where we're going to insert
+				currentEntry = dataSet[i]; // What we're inserting
+
+				while(insertPos > 0 && dataSet[insertPos-1].zip < currentEntry.zip) { // Move entry back as long as its zip code is larger than the previous entry's 
+					dataSet[insertPos] = dataSet[insertPos-1];
+					insertPos--;
+
+				}
+
+				if(insertPos != i) {
+					dataSet[insertPos] = currentEntry;
+				}
+				
+			}		
+		}		
+	}
+
+
 }
 
 int main(int argc, char* args[]) {
 
-	string inputFile, rangeStartStr, rangeEndStr, attrNumStr, workerNumStr;
+	string inputFile, rangeStartStr, rangeEndStr, attrNumStr, workerNumStr, sortOrder;
 
 	// We know the exact order of arguments, so we don't have to look for them in a for loop
 	inputFile = args[1];
@@ -55,6 +195,7 @@ int main(int argc, char* args[]) {
 	int attrNum = stoi(attrNumStr);
 	workerNumStr = args[5];
 	int workerNum = stoi(workerNumStr);
+	sortOrder = args[6];
 
 	cout << "Worker #" << workerNum << " started." << endl;
 
@@ -136,7 +277,7 @@ int main(int argc, char* args[]) {
 	cout << "\n" << "Worker #" << workerNum << " output in range " << rangeStart << " - " << rangeEnd << endl;
 
 	int n = sizeof(dataSet)/sizeof(dataSet[0]);
-	insertionSort(dataSet, n);
+	insertionSort(dataSet, n, attrNum, sortOrder);
 	for(unsigned int i = 0; i < sizeof(dataSet)/sizeof(dataSet[0]); i++) { // Print results of parsing
 		cout << dataSet[i].rid << " " << dataSet[i].firstName << " " << dataSet[i].lastName << " " << dataSet[i].dep << " " << dataSet[i].income << " " << dataSet[i].zip << endl;
 	}

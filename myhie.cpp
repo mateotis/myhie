@@ -215,6 +215,13 @@ int main(int argc, char* args[]) {
 				string rangeEndStr = to_string(workerRanges[childNum][1]);
 				string attrNumStr = to_string(attrNum);
 				string childNumStr = to_string(childNum);
+				string sortOrder = "";
+				if(ascendingOrder == true) {
+					sortOrder = "ascending";
+				}
+				else {
+					sortOrder = "descending";
+				}
 
 				// Sadly, we're not free of char arrays in this program either - the exec command can't handle strings as parameters, so we have to go the old-fashioned way
 				char* inputFileChar = new char[30];
@@ -222,6 +229,7 @@ int main(int argc, char* args[]) {
 				char* rangeEndChar = new char[30];
 				char* attrNumChar = new char[30];
 				char* childNumChar = new char[30];
+				char* sortOrderChar = new char[30];
 
 				// As hacky as this seems, this is genuinely the best way I found to convert an int to a char array (by first converting it to a string)
 				strcpy(inputFileChar, inputFile.c_str());
@@ -229,8 +237,9 @@ int main(int argc, char* args[]) {
 				strcpy(rangeEndChar, rangeEndStr.c_str());
 				strcpy(attrNumChar, attrNumStr.c_str());
 				strcpy(childNumChar, childNumStr.c_str());
+				strcpy(sortOrderChar, sortOrder.c_str());
 
-				char *arg[] = {"worker",inputFileChar,rangeStartChar, rangeEndChar, attrNumChar, childNumChar, NULL}; 
+				char *arg[] = {"worker",inputFileChar,rangeStartChar, rangeEndChar, attrNumChar, childNumChar, sortOrderChar, NULL}; 
 				execv("./worker", arg);	
 			}
 		
