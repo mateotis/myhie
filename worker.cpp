@@ -9,15 +9,40 @@
 
 using namespace std;
 
+
+struct Taxpayer { // Struct that stores all our data - we don't need a class as you don't really modify this data, you just sort it
+	int rid;
+	string firstName;
+	string lastName;
+	int dep;
+	float income;
+	int zip;		
+};
+
+void insertionSort(Taxpayer dataSet[], int n) { // TO DO - adapt to all possible sorting attributes
+	int insertPos;
+	Taxpayer currentEntry;
+
+	for(unsigned int i = 1; i < n; i++) {
+		insertPos = i; // Where we're going to insert
+		currentEntry = dataSet[i]; // What we're inserting
+
+		while(insertPos > 0 && dataSet[insertPos-1].rid > currentEntry.rid) { // Move entry back as long as its RID is smaller than the previous entry's 
+			dataSet[insertPos] = dataSet[insertPos-1];
+			insertPos--;
+
+		}
+
+		if(insertPos != i) {
+			dataSet[insertPos] = currentEntry;
+		}
+		
+	}
+}
+
 int main(int argc, char* args[]) {
 
-	cout << "Worker started" << endl;
-
-	for(int i = 0; i < 5; i++) {
-		cout << args[i] << endl;
-	}
-
-	string inputFile, rangeStartStr, rangeEndStr, attrNumStr;
+	string inputFile, rangeStartStr, rangeEndStr, attrNumStr, workerNumStr;
 
 	// We know the exact order of arguments, so we don't have to look for them in a for loop
 	inputFile = args[1];
@@ -28,17 +53,11 @@ int main(int argc, char* args[]) {
 	int rangeEnd = stoi(rangeEndStr);
 	attrNumStr = args[4];
 	int attrNum = stoi(attrNumStr);
+	workerNumStr = args[5];
+	int workerNum = stoi(workerNumStr);
 
-	cout << "Range start: " << rangeStart << endl << "Range end: " << rangeEnd << endl << "Attr num: " << attrNum << endl;
+	cout << "Worker #" << workerNum << " started." << endl;
 
-	struct Taxpayer { // Struct that stores all our data - we don't need a class as you don't really modify this data, you just sort it
-		int rid;
-		string firstName;
-		string lastName;
-		int dep;
-		float income;
-		int zip;		
-	};
 
 	ifstream fin;
 	fin.open(inputFile);
@@ -114,6 +133,10 @@ int main(int argc, char* args[]) {
 
 	fin.close();
 
+	cout << "\n" << "Worker #" << workerNum << " output in range " << rangeStart << " - " << rangeEnd << endl;
+
+	int n = sizeof(dataSet)/sizeof(dataSet[0]);
+	insertionSort(dataSet, n);
 	for(unsigned int i = 0; i < sizeof(dataSet)/sizeof(dataSet[0]); i++) { // Print results of parsing
 		cout << dataSet[i].rid << " " << dataSet[i].firstName << " " << dataSet[i].lastName << " " << dataSet[i].dep << " " << dataSet[i].income << " " << dataSet[i].zip << endl;
 	}

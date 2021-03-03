@@ -198,46 +198,59 @@ int main(int argc, char* args[]) {
 			cout << "Worker #" << i << " range is: " << workerRanges[i][0] << " - " << workerRanges[i][1] << endl;
 		}
 
-		// Creating worker child
+		// Creating worker children
+
+		for(int childNum = 0; childNum < workerNum; childNum++) {
+
+			pid_t pid;
+			pid = fork(); // First we fork it
+
+			if(pid < 0) { // Error handling
+				cerr << "Error: could not start worker child process." << endl;
+				return -1;
+			} 
+			else if(pid == 0) { // Worker child, we pass to it the file it needs to read, the specific ranges, the attribute it needs to sort by, and also its assigned worker number
+				cout << "Starting worker process #" << childNum << " with parent ID " << getppid() << endl;
+				string rangeStartStr = to_string(workerRanges[childNum][0]);
+				string rangeEndStr = to_string(workerRanges[childNum][1]);
+				string attrNumStr = to_string(attrNum);
+				string childNumStr = to_string(childNum);
+
+				// Sadly, we're not free of char arrays in this program either - the exec command can't handle strings as parameters, so we have to go the old-fashioned way
+				char* inputFileChar = new char[30];
+				char* rangeStartChar = new char[30];
+				char* rangeEndChar = new char[30];
+				char* attrNumChar = new char[30];
+				char* childNumChar = new char[30];
+
+				// As hacky as this seems, this is genuinely the best way I found to convert an int to a char array (by first converting it to a string)
+				strcpy(inputFileChar, inputFile.c_str());
+				strcpy(rangeStartChar, rangeStartStr.c_str());
+				strcpy(rangeEndChar, rangeEndStr.c_str());
+				strcpy(attrNumChar, attrNumStr.c_str());
+				strcpy(childNumChar, childNumStr.c_str());
+
+				char *arg[] = {"worker",inputFileChar,rangeStartChar, rangeEndChar, attrNumChar, childNumChar, NULL}; 
+				execv("./worker", arg);	
+			}
+		
+		}
 
 		pid_t pid;
-		pid = fork(); // First we fork it
-		if(pid < 0) { // Error handling
-			cerr << "Error: could not start worker child process." << endl;
-			return -1;
-		} 
-		else if(pid == 0) { // Worker child, we pass to it the file it needs to read and the specific ranges
-			cout << "Starting worker process" << endl;
-			string rangeStartStr = to_string(workerRanges[1][0]);
-			string rangeEndStr = to_string(workerRanges[1][1]);
-			string attrNumStr = to_string(attrNum);
+		int status = 0;
 
-			// Sadly, we're not free of char arrays in this program either - the exec command can't handle strings as parameters, so we have to go the old-fashioned way
-			char* inputFileChar = new char[30];
-			char* rangeStartChar = new char[30];
-			char* rangeEndChar = new char[30];
-			char* attrNumChar = new char[30];
+		//loop to wait for all children
+		while ((pid = wait(&status)) != -1)
+		{
 
-			// As hacky as this seems, this is genuinely the best way I found to convert an int to a char array (by first converting it to a string)
-			strcpy(inputFileChar, inputFile.c_str());
-			strcpy(rangeStartChar, rangeStartStr.c_str());
-			strcpy(rangeEndChar, rangeEndStr.c_str());
-			strcpy(attrNumChar, attrNumStr.c_str());
-
-			char *arg[] = {"worker",inputFileChar,rangeStartChar, rangeEndChar, attrNumChar, NULL}; 
-			execv("./worker", arg);			
-		}
-		else { // Parent will wait for worker to finish
-
-			wait(NULL);
-			cout << "Worker child finished running." << endl;
-
+			//call function to display return status of child with this pid
+			showReturnStatus(pid, status);
 		}
 
 
 
 	} 
-	else { // Parents waits for child to complete
+	else { // Parents waits for coord to finish
 		wait(NULL);
 		cout << "Coord child finished running." << endl;
 	}
