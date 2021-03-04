@@ -36,6 +36,11 @@ int main(int argc, char* args[]) {
 	bool randomRanges = false;
 	bool ascendingOrder = true; // If false, then we'll sort in a descending order, obviously
 
+	clock_t timeStart, timeEnd; // We'll measure the execution time of the entire program
+	double execTime;
+
+	timeStart = clock();
+
 	for(int i = 0; i < argc; i++) {
 		if(strcmp(args[i], "-i") == 0) { // Parameter parsing code adapted from my mvote program, except we have many more params here
 			inputFile = args[i+1];
@@ -262,11 +267,12 @@ int main(int argc, char* args[]) {
 	else { // Parents waits for coord to finish
 		wait(NULL);
 		cout << "Coord child finished running." << endl;
-	}
 
-/*	for(unsigned int i = 0; i < sizeof(dataSet)/sizeof(dataSet[0]); i++) { // Print results of parsing
-		cout << dataSet[i].rid << " " << dataSet[i].firstName << " " << dataSet[i].lastName << " " << dataSet[i].dep << " " << dataSet[i].income << " " << dataSet[i].zip << endl;
-	}*/
+		timeEnd = clock();
+		execTime = (double(timeEnd) - double(timeStart)) / CLOCKS_PER_SEC; // CLOCKS_PER_SEC is a constant defined in ctime
+
+		cout << "Execution time for myhie: " << execTime << " seconds." << endl; 
+	}
 
 	return 0;
 

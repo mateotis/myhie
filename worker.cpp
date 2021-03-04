@@ -6,6 +6,7 @@
 #include <sys/stat.h> 
 #include <sys/types.h> 
 #include <unistd.h>
+#include <ctime>
 
 #include "sorters.cpp"
 
@@ -14,6 +15,10 @@ using namespace std;
 int main(int argc, char* args[]) {
 
 	string inputFile, rangeStartStr, rangeEndStr, attrNumStr, workerNumStr, sortOrder;
+	clock_t timeStart, timeEnd; // We'll measure the execution time of each worker
+	double execTime;
+
+	timeStart = clock();
 
 	// We know the exact order of arguments, so we don't have to look for them in a for loop
 	inputFile = args[1];
@@ -125,6 +130,11 @@ int main(int argc, char* args[]) {
 	for(unsigned int i = 0; i < sizeof(dataSet)/sizeof(dataSet[0]); i++) { // Print results of parsing
 		cout << dataSet[i].rid << " " << dataSet[i].firstName << " " << dataSet[i].lastName << " " << dataSet[i].dep << " " << dataSet[i].income << " " << dataSet[i].zip << endl;
 	}
+
+	timeEnd = clock();
+	execTime = (double(timeEnd) - double(timeStart)) / CLOCKS_PER_SEC; // CLOCKS_PER_SEC is a constant defined in ctime
+
+	cout << "Execution time for worker #" << workerNum << ": " << execTime << " seconds." << endl; 
 
 	return 0;
 
