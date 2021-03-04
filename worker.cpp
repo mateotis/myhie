@@ -176,8 +176,152 @@ void insertionSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { /
 			}		
 		}		
 	}
+}
 
+void bubbleSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { // Bubble sort from scratch - another O(n^2) sorting algorithm that employs constant pair comparisons to sort
+	Taxpayer tempEntry;
+	bool swapped = false;
 
+	if(attrNum == 0) { // Sorting by RID
+
+		if(sortOrder == "ascending") {
+
+			do { // Probably the first time I've ever written a do-while loop in an actual program - but it's necessary here, as bubble sort always requires one full loop to tell if the array is sorted
+				swapped = false; // If we go through an entire for loop without this changing to true, that means the array is sorted and we're done
+				for(int i = 1; i < n; i++) {
+					if(dataSet[i-1].rid > dataSet[i].rid) { // We always compare neighbouring entries: if they're out of order, swap them
+						tempEntry = dataSet[i];
+						dataSet[i] = dataSet[i-1]; // We moved the value originally at dataSet[i-1] forward by one place - on next iteration, we'll compare it again, and move it again if necessary; this way the highest/lowest entry "bubbles to the top"
+						dataSet[i-1] = tempEntry;
+
+						swapped = true; // We've done at least one swap, so the array is not yet sorted - repeat the while loop
+					}
+				}
+			}
+			while(swapped == true);
+		}
+		else {
+
+			do {
+				swapped = false;
+				for(int i = 1; i < n; i++) {
+					if(dataSet[i-1].rid < dataSet[i].rid) { // As with insertion sort, all we have to do to achieve descending sorting is flip the comparison sign
+						tempEntry = dataSet[i];
+						dataSet[i] = dataSet[i-1];
+						dataSet[i-1] = tempEntry;
+
+						swapped = true;
+					}
+				}
+			}
+			while(swapped == true);		
+		}
+	}
+	else if(attrNum == 3) { // By number of dependents
+
+		if(sortOrder == "ascending") {
+
+			do { // Probably the first time I've ever written a do-while loop in an actual program - but it's necessary here, as bubble sort always requires one full loop to tell if the array is sorted
+				swapped = false; // If we go through an entire for loop without this changing to true, that means the array is sorted and we're done
+				for(int i = 1; i < n; i++) {
+					if(dataSet[i-1].dep > dataSet[i].dep) { // We always compare neighbouring entries: if they're out of order, swap them
+						tempEntry = dataSet[i];
+						dataSet[i] = dataSet[i-1]; // We moved the value originally at dataSet[i-1] forward by one place - on next iteration, we'll compare it again, and move it again if necessary; this way the highest/lowest entry "bubbles to the top"
+						dataSet[i-1] = tempEntry;
+
+						swapped = true; // We've done at least one swap, so the array is not yet sorted - repeat the while loop
+					}
+				}
+			}
+			while(swapped == true);
+		}
+		else {
+
+			do {
+				swapped = false;
+				for(int i = 1; i < n; i++) {
+					if(dataSet[i-1].dep < dataSet[i].dep) { // As with insertion sort, all we have to do to achieve descending sorting is flip the comparison sign
+						tempEntry = dataSet[i];
+						dataSet[i] = dataSet[i-1];
+						dataSet[i-1] = tempEntry;
+
+						swapped = true;
+					}
+				}
+			}
+			while(swapped == true);		
+		}
+	}
+	else if(attrNum == 4) { // By income
+
+		if(sortOrder == "ascending") {
+
+			do { // Probably the first time I've ever written a do-while loop in an actual program - but it's necessary here, as bubble sort always requires one full loop to tell if the array is sorted
+				swapped = false; // If we go through an entire for loop without this changing to true, that means the array is sorted and we're done
+				for(int i = 1; i < n; i++) {
+					if(dataSet[i-1].income > dataSet[i].income) { // We always compare neighbouring entries: if they're out of order, swap them
+						tempEntry = dataSet[i];
+						dataSet[i] = dataSet[i-1]; // We moved the value originally at dataSet[i-1] forward by one place - on next iteration, we'll compare it again, and move it again if necessary; this way the highest/lowest entry "bubbles to the top"
+						dataSet[i-1] = tempEntry;
+
+						swapped = true; // We've done at least one swap, so the array is not yet sorted - repeat the while loop
+					}
+				}
+			}
+			while(swapped == true);
+		}
+		else {
+
+			do {
+				swapped = false;
+				for(int i = 1; i < n; i++) {
+					if(dataSet[i-1].income < dataSet[i].income) { // As with insertion sort, all we have to do to achieve descending sorting is flip the comparison sign
+						tempEntry = dataSet[i];
+						dataSet[i] = dataSet[i-1];
+						dataSet[i-1] = tempEntry;
+
+						swapped = true;
+					}
+				}
+			}
+			while(swapped == true);		
+		}
+	}
+	else if(attrNum == 5) { // By zip code
+
+		if(sortOrder == "ascending") {
+
+			do { // Probably the first time I've ever written a do-while loop in an actual program - but it's necessary here, as bubble sort always requires one full loop to tell if the array is sorted
+				swapped = false; // If we go through an entire for loop without this changing to true, that means the array is sorted and we're done
+				for(int i = 1; i < n; i++) {
+					if(dataSet[i-1].zip > dataSet[i].zip) { // We always compare neighbouring entries: if they're out of order, swap them
+						tempEntry = dataSet[i];
+						dataSet[i] = dataSet[i-1]; // We moved the value originally at dataSet[i-1] forward by one place - on next iteration, we'll compare it again, and move it again if necessary; this way the highest/lowest entry "bubbles to the top"
+						dataSet[i-1] = tempEntry;
+
+						swapped = true; // We've done at least one swap, so the array is not yet sorted - repeat the while loop
+					}
+				}
+			}
+			while(swapped == true);
+		}
+		else {
+
+			do {
+				swapped = false;
+				for(int i = 1; i < n; i++) {
+					if(dataSet[i-1].zip < dataSet[i].zip) { // As with insertion sort, all we have to do to achieve descending sorting is flip the comparison sign
+						tempEntry = dataSet[i];
+						dataSet[i] = dataSet[i-1];
+						dataSet[i-1] = tempEntry;
+						
+						swapped = true;
+					}
+				}
+			}
+			while(swapped == true);		
+		}
+	}
 }
 
 int main(int argc, char* args[]) {
@@ -277,7 +421,8 @@ int main(int argc, char* args[]) {
 	cout << "\n" << "Worker #" << workerNum << " output in range " << rangeStart << " - " << rangeEnd << endl;
 
 	int n = sizeof(dataSet)/sizeof(dataSet[0]);
-	insertionSort(dataSet, n, attrNum, sortOrder);
+	//insertionSort(dataSet, n, attrNum, sortOrder);
+	bubbleSort(dataSet, n, attrNum, sortOrder);
 	for(unsigned int i = 0; i < sizeof(dataSet)/sizeof(dataSet[0]); i++) { // Print results of parsing
 		cout << dataSet[i].rid << " " << dataSet[i].firstName << " " << dataSet[i].lastName << " " << dataSet[i].dep << " " << dataSet[i].income << " " << dataSet[i].zip << endl;
 	}
