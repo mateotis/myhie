@@ -1,7 +1,8 @@
 #include <iostream>
 #include <fstream>
 #include <cstdio> 
-#include <string> 
+#include <string>
+#include <cstring>
 #include <fcntl.h> 
 #include <sys/stat.h> 
 #include <sys/types.h> 
@@ -127,9 +128,51 @@ int main(int argc, char* args[]) {
 		bubbleSort(dataSet, n, attrNum, sortOrder);	
 	}
 	
-	for(unsigned int i = 0; i < sizeof(dataSet)/sizeof(dataSet[0]); i++) { // Print results of parsing
+/*	for(unsigned int i = 0; i < sizeof(dataSet)/sizeof(dataSet[0]); i++) { // Print results of parsing
 		cout << dataSet[i].rid << " " << dataSet[i].firstName << " " << dataSet[i].lastName << " " << dataSet[i].dep << " " << dataSet[i].income << " " << dataSet[i].zip << endl;
+	}*/
+
+	cout << "Sending data back to main through the pipe..." << endl;
+
+	char* intfifo = "intfifo";
+	if(mkfifo("intfifo" , 0777) == -1) {
+		if(errno != EEXIST) {
+			cerr << "Error: couldn't create intfifo pipe" << endl;
+			exit(-1);
+		}
 	}
+	char* charfifo = "charfifo";
+	if(mkfifo("charfifo" , 0777) == -1) {
+		if(errno != EEXIST) {
+			cerr << "Error: couldn't create charfifo pipe" << endl;
+			exit(-1);
+		}
+	}
+
+	int fd1, fd2;
+	fd1 = open(intfifo, O_WRONLY);
+	fd2 = open(charfifo, O_WRONLY);
+
+	write(fd1, &n, sizeof(n));
+
+	// A lesson learned the hard way: do NOT mix two pipes with different type variables in them. You'll only get sad and frustrated
+	for(int i = 0; i < n; i++) {
+
+		write(fd2, (dataSet[i].firstName).c_str(), (dataSet[i].firstName).length()+1);
+		write(fd2, (dataSet[i].lastName).c_str(), (dataSet[i].lastName).length()+1);
+	}
+
+	close(fd2);
+
+	for(int i = 0; i < n; i++) {
+
+		write(fd1, &dataSet[i].rid, sizeof(dataSet[i].rid));
+		write(fd1, &dataSet[i].dep, sizeof(dataSet[i].dep));
+		write(fd1, &dataSet[i].income, sizeof(dataSet[i].income));
+		write(fd1, &dataSet[i].zip, sizeof(dataSet[i].zip));
+	}
+
+	close(fd1);
 
 	timeEnd = clock();
 	execTime = (double(timeEnd) - double(timeStart)) / CLOCKS_PER_SEC; // CLOCKS_PER_SEC is a constant defined in ctime

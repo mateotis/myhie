@@ -11,6 +11,8 @@
 #include <sys/stat.h> 
 #include <sys/types.h> 
 
+#include "sorters.cpp"
+
 using namespace std;
 
 static void showReturnStatus(pid_t childpid, int status) // Diagnostic function taken from an OS lab
@@ -228,7 +230,7 @@ int main(int argc, char* args[]) {
 					sortOrder = "descending";
 				}
 
-				// Sadly, we're not free of char arrays in this program either - the exec command can't handle strings as parameters, so we have to go the old-fashioned way
+				// Sadly, we're not free of char arrays in this program either - the exec() command can't handle strings as parameters, so we have to go the old-fashioned way
 				char* inputFileChar = new char[30];
 				char* rangeStartChar = new char[30];
 				char* rangeEndChar = new char[30];
@@ -253,12 +255,78 @@ int main(int argc, char* args[]) {
 		pid_t pid;
 		int status = 0;
 
+		char* intfifo = "intfifo";
+		if(mkfifo("intfifo" , 0777) == -1) {
+			if(errno != EEXIST) {
+				cerr << "Error: couldn't create intfifo pipe" << endl;
+				exit(-1);
+			}
+		}
+		char* charfifo = "charfifo";
+		if(mkfifo("charfifo" , 0777) == -1) {
+			if(errno != EEXIST) {
+				cerr << "Error: couldn't create charfifo pipe" << endl;
+				exit(-1);
+			}
+		}
+
+		Taxpayer partSortedData[lineCount];
+
+		int fd1, fd2;
+		fd1 = open(intfifo,O_RDONLY);
+		fd2 = open(charfifo,O_RDONLY);
+
+		int rid, dep, zip;
+		float income;
+		char firstName[100];
+		char lastName[100];
+
+		int n; // Number of entries in the worker; the first thing we read from the pipe
+		read(fd1, &n, sizeof(n));
+
+		cout << "n is: " << n << endl;
+
+		// A lesson learned the hard way: do NOT mix two pipes with different type variables in them; you'll only get sad and frustrated
+		for(int i = 0; i < lineCount; i++) { // The order also seems to matter: we take care of the iffy character arrays first before moving onto the nice basic data types
+			read(fd2, firstName, sizeof(firstName));
+			cout << "First name read: " << firstName << endl;
+			read(fd2, lastName, sizeof(lastName));
+			cout << "Last name read: " << lastName << endl;
+
+			string firstNameStr(firstName); // Fortunately, converting back to string from char array is simple
+			string lastNameStr(lastName);
+			partSortedData[i].firstName = firstNameStr;
+			partSortedData[i].lastName = lastNameStr;
+		}	
+		close(fd2);
+		for(int i = 0; i < lineCount; i++) {
+			read(fd1, &rid, sizeof(rid));
+			cout << "RID read: " << rid << endl;
+			read(fd1, &dep, sizeof(dep));
+			cout << "Dep read: " << dep << endl;
+			read(fd1, &income, sizeof(income));
+			cout << "Income read: " << income << endl;
+			read(fd1, &zip, sizeof(zip));
+			cout << "Zip read: " << zip << endl;
+
+			partSortedData[i].rid = rid;
+			partSortedData[i].dep = dep;
+			partSortedData[i].income = income;
+			partSortedData[i].zip = zip;
+		}	
+		close(fd1);
+
+		cout << "Sorted array received from worker" << endl;
+		for(unsigned int i = 0; i < sizeof(partSortedData)/sizeof(partSortedData[0]); i++) { // Print results of parsing
+			cout << partSortedData[i].rid << " " << partSortedData[i].firstName << " " << partSortedData[i].lastName << " " << partSortedData[i].dep << " " << partSortedData[i].income << " " << partSortedData[i].zip << endl;
+		}
+
 		//loop to wait for all children
 		while ((pid = wait(&status)) != -1)
 		{
 
 			//call function to display return status of child with this pid
-			showReturnStatus(pid, status);
+			showReturnStatus(pid, status);			
 		}
 
 
