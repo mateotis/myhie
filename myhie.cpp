@@ -27,6 +27,14 @@ static void showReturnStatus(pid_t childpid, int status) // Diagnostic function 
 		printf("Child %ld stopped due to signal %d\n", (long)childpid, WSTOPSIG(status));
 }
 
+void signalHandler(int signal)
+{
+	cout << "Caught signal " << signal << endl;
+	if (signal==SIGUSR1) {
+		cout << "SIGUSR1 caught in parent: some worker is ready to write" << endl;
+	}
+}
+
 int main(int argc, char* args[]) {
 
 	string inputFile = "";
@@ -207,10 +215,15 @@ int main(int argc, char* args[]) {
 
 		// Creating worker children
 
+		pid_t pidArray[workerNum]; // Array to save the child PIDs in, will be useful for signal sending/catching
+		signal(SIGUSR1, signalHandler);
+
 		for(int childNum = 0; childNum < workerNum; childNum++) {
 
 			pid_t pid;
 			pid = fork(); // First we fork it
+			pidArray[childNum] = pid;
+			cout << "Child PID: " << pid << endl;
 
 			if(pid < 0) { // Error handling
 				cerr << "Error: could not start worker child process." << endl;
@@ -262,64 +275,97 @@ int main(int argc, char* args[]) {
 				exit(-1);
 			}
 		}
-		char* charfifo = "charfifo";
+/*		char* charfifo = "charfifo";
 		if(mkfifo("charfifo" , 0777) == -1) {
 			if(errno != EEXIST) {
 				cerr << "Error: couldn't create charfifo pipe" << endl;
 				exit(-1);
 			}
-		}
+		}*/
 
-		Taxpayer partSortedData[lineCount];
-
+/*		Taxpayer** partSortedData = new Taxpayer*[workerNum];
+		for(int i = 0; i < workerNum; i++) {
+			int range = workerRanges[i][1] - workerRanges[i][0] + 1;
+			partSortedData[i] = new Taxpayer[range];
+			cout << "Range: " << range << endl;
+		}*/
+		Taxpayer partSortedData[workerNum][lineCount];
 		int fd1, fd2;
-		fd1 = open(intfifo,O_RDONLY);
-		fd2 = open(charfifo,O_RDONLY);
+
 
 		int rid, dep, zip;
 		float income;
 		char firstName[100];
 		char lastName[100];
 
-		int n; // Number of entries in the worker; the first thing we read from the pipe
+		cout << "Worker is not allowed to write yet..." << endl;
+		//sleep(3);
+		//kill(pidArray[0], SIGUSR1);
+		//sleep(3);
+		//kill(pidArray[1], SIGUSR1);
+
+/*		int n; // Number of entries in the worker; the first thing we read from the pipe
 		read(fd1, &n, sizeof(n));
 
-		cout << "n is: " << n << endl;
+		cout << "n is: " << n << endl;*/
 
 		// A lesson learned the hard way: do NOT mix two pipes with different type variables in them; you'll only get sad and frustrated
-		for(int i = 0; i < lineCount; i++) { // The order also seems to matter: we take care of the iffy character arrays first before moving onto the nice basic data types
-			read(fd2, firstName, sizeof(firstName));
-			cout << "First name read: " << firstName << endl;
-			read(fd2, lastName, sizeof(lastName));
-			cout << "Last name read: " << lastName << endl;
 
-			string firstNameStr(firstName); // Fortunately, converting back to string from char array is simple
-			string lastNameStr(lastName);
-			partSortedData[i].firstName = firstNameStr;
-			partSortedData[i].lastName = lastNameStr;
-		}	
-		close(fd2);
-		for(int i = 0; i < lineCount; i++) {
-			read(fd1, &rid, sizeof(rid));
-			cout << "RID read: " << rid << endl;
-			read(fd1, &dep, sizeof(dep));
-			cout << "Dep read: " << dep << endl;
-			read(fd1, &income, sizeof(income));
-			cout << "Income read: " << income << endl;
-			read(fd1, &zip, sizeof(zip));
-			cout << "Zip read: " << zip << endl;
+		fd1 = open(intfifo,O_RDONLY);
+		//fd2 = open(charfifo,O_RDONLY);
+		cout << "got here1" << endl;
 
-			partSortedData[i].rid = rid;
-			partSortedData[i].dep = dep;
-			partSortedData[i].income = income;
-			partSortedData[i].zip = zip;
-		}	
-		close(fd1);
 
-		cout << "Sorted array received from worker" << endl;
-		for(unsigned int i = 0; i < sizeof(partSortedData)/sizeof(partSortedData[0]); i++) { // Print results of parsing
-			cout << partSortedData[i].rid << " " << partSortedData[i].firstName << " " << partSortedData[i].lastName << " " << partSortedData[i].dep << " " << partSortedData[i].income << " " << partSortedData[i].zip << endl;
+		for(int j = 0; j < workerNum; j++) {
+			sleep(1);
+			cout << "Sending signal to child with PID: " << pidArray[j] << endl;
+			kill(pidArray[j], SIGUSR1);
+			cout << "got here" << endl;
+/*			for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0]+1; i++) { // The order also seems to matter: we take care of the iffy character arrays first before moving onto the nice basic data types
+				read(fd2, firstName, sizeof(firstName));
+				cout << "First name read: " << firstName << endl;
+				read(fd2, lastName, sizeof(lastName));
+				cout << "Last name read: " << lastName << endl;
+
+				string firstNameStr(firstName); // Fortunately, converting back to string from char array is simple
+				string lastNameStr(lastName);
+				partSortedData[j][i].firstName = firstNameStr;
+				partSortedData[j][i].lastName = lastNameStr;
+			}	*/
+			//close(fd2);
+			for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0]+1; i++) {
+				read(fd1, &rid, sizeof(rid));
+				cout << "RID read: " << rid << endl;
+				read(fd1, &dep, sizeof(dep));
+				cout << "Dep read: " << dep << endl;
+				read(fd1, &income, sizeof(income));
+				cout << "Income read: " << income << endl;
+				read(fd1, &zip, sizeof(zip));
+				cout << "Zip read: " << zip << endl;
+
+				partSortedData[j][i].rid = rid;
+				partSortedData[j][i].dep = dep;
+				partSortedData[j][i].income = income;
+				partSortedData[j][i].zip = zip;
+			}	
+			//close(fd1);
+			cout << "boop" << endl;
+			sleep(3);
 		}
+		close(fd1);
+		close(fd2);
+
+		unlink(intfifo);
+		unlink("charfifo");
+
+		cout << "Before printing" << endl;
+		for(int j = 0; j < workerNum; j++) {
+			cout << "Sorted array received from worker #" << j << endl;
+			for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0] + 1; i++) { // Print results of parsing
+				cout << partSortedData[j][i].rid << " " << partSortedData[j][i].firstName << " " << partSortedData[j][i].lastName << " " << partSortedData[j][i].dep << " " << partSortedData[j][i].income << " " << partSortedData[j][i].zip << endl;
+			}			
+		}
+
 
 		//loop to wait for all children
 		while ((pid = wait(&status)) != -1)

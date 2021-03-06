@@ -6,6 +6,7 @@
 #include <fcntl.h> 
 #include <sys/stat.h> 
 #include <sys/types.h> 
+#include <sys/wait.h>
 #include <unistd.h>
 #include <ctime>
 
@@ -13,7 +14,20 @@
 
 using namespace std;
 
+bool readyToWrite = false;
+
+void signalHandler(int signal)
+{
+	cout << "Caught in child signal " << signal << endl;
+	if (signal==SIGUSR1) {
+		cout << "Worker is allowed to write!" << endl;
+		readyToWrite = true;
+	}
+}
+
 int main(int argc, char* args[]) {
+
+	signal(SIGUSR1, signalHandler);
 
 	string inputFile, rangeStartStr, rangeEndStr, attrNumStr, workerNumStr, sortOrder;
 	clock_t timeStart, timeEnd; // We'll measure the execution time of each worker
@@ -25,7 +39,6 @@ int main(int argc, char* args[]) {
 	inputFile = args[1];
 	rangeStartStr = args[2];
 	int rangeStart = stoi(rangeStartStr); // Thankfully stoi() also works on char arrays so no need for extra magic here
-	cout << rangeStart << endl;
 	rangeEndStr = args[3];
 	int rangeEnd = stoi(rangeEndStr);
 	attrNumStr = args[4];
@@ -132,7 +145,6 @@ int main(int argc, char* args[]) {
 		cout << dataSet[i].rid << " " << dataSet[i].firstName << " " << dataSet[i].lastName << " " << dataSet[i].dep << " " << dataSet[i].income << " " << dataSet[i].zip << endl;
 	}*/
 
-	cout << "Sending data back to main through the pipe..." << endl;
 
 	char* intfifo = "intfifo";
 	if(mkfifo("intfifo" , 0777) == -1) {
@@ -141,28 +153,38 @@ int main(int argc, char* args[]) {
 			exit(-1);
 		}
 	}
-	char* charfifo = "charfifo";
+/*	char* charfifo = "charfifo";
 	if(mkfifo("charfifo" , 0777) == -1) {
 		if(errno != EEXIST) {
 			cerr << "Error: couldn't create charfifo pipe" << endl;
 			exit(-1);
 		}
-	}
+	}*/
 
 	int fd1, fd2;
 	fd1 = open(intfifo, O_WRONLY);
-	fd2 = open(charfifo, O_WRONLY);
+	//fd2 = open(charfifo, O_WRONLY);
 
-	write(fd1, &n, sizeof(n));
+	//kill(getppid(), SIGUSR1); // Sending coord signal that we're ready to write to pipe
+
+	cout << "Worker #" << workerNum << " waiting to write..." << endl;
+	while(readyToWrite == false) { // Worker waits until it receives the signal from coord that it can write into the pipe
+		sleep(1);
+	}
+	//kill(getppid(), SIGUSR1);
+
+	//write(fd1, &n, sizeof(n));
+
+	cout << "Worker #" << workerNum << " writing to pipe..." << endl;
 
 	// A lesson learned the hard way: do NOT mix two pipes with different type variables in them. You'll only get sad and frustrated
-	for(int i = 0; i < n; i++) {
+/*	for(int i = 0; i < n; i++) {
 
 		write(fd2, (dataSet[i].firstName).c_str(), (dataSet[i].firstName).length()+1);
 		write(fd2, (dataSet[i].lastName).c_str(), (dataSet[i].lastName).length()+1);
 	}
 
-	close(fd2);
+	close(fd2);*/
 
 	for(int i = 0; i < n; i++) {
 
