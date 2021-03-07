@@ -314,3 +314,48 @@ void bubbleSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { // B
 		}
 	}
 }
+
+void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, int lineCount) {
+	cout << "In merger!" << endl;
+
+	Taxpayer finalSortedData[lineCount];
+	int workerIterators[workerNum] = {0}; // Iterators used by the merging algorithm
+
+	// The merger checks the first elements of every sub-array, looking for the smallest/largest value, then it advances the iterator of that sub-array before moving onto the next value
+	int currentMin = 9999999;
+	int currentMinWorker = 0;
+	Taxpayer currentTaxpayer;
+	for(int i = 0; i < lineCount; i++) {
+		for(int j = 0; j < workerNum; j++) {
+			if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
+				continue;
+			}
+			if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
+				continue;
+			}
+			cout << "Worker #" << j << ": Checking " << partSortedData[workerRangeStarts[j] + workerIterators[j]].rid << " against " << currentMin << endl;			
+			if(partSortedData[workerRangeStarts[j] + workerIterators[j]].rid < currentMin) {
+				currentTaxpayer = partSortedData[workerRangeStarts[j] + workerIterators[j]];
+				currentMin = partSortedData[workerRangeStarts[j] + workerIterators[j]].rid;
+				currentMinWorker = j;
+			}
+			//cout << "First element for worker #" << j << ": " << partSortedData[j+workerRangeStarts[j]].rid << endl;
+		}
+		//cout << "Selected RID is: " << currentTaxpayer.rid << endl;
+		finalSortedData[i] = currentTaxpayer;
+		workerIterators[currentMinWorker]++; // Advance the iterator of the sub-array where we found the right element, to ensure that we don't consider it again
+
+		cout << "Iterator for worker #" << currentMinWorker << " is now: " << workerIterators[currentMinWorker] << endl;
+
+		currentMin = 9999999;
+		currentMinWorker = 0;
+
+
+	}
+
+	cout << "FINAL SORTED DATA" << endl;
+	for(int i = 0; i < lineCount; i++) {
+		cout << finalSortedData[i].rid << " " << finalSortedData[i].firstName << " " << finalSortedData[i].lastName << " " << finalSortedData[i].dep << " " << finalSortedData[i].income << " " << finalSortedData[i].zip << endl;		
+	}
+
+}

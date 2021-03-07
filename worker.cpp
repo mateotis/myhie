@@ -145,16 +145,13 @@ int main(int argc, char* args[]) {
 		cout << dataSet[i].rid << " " << dataSet[i].firstName << " " << dataSet[i].lastName << " " << dataSet[i].dep << " " << dataSet[i].income << " " << dataSet[i].zip << endl;
 	}*/
 
-
-	char* intfifo = "intfifo";
 	if(mkfifo("intfifo" , 0777) == -1) {
 		if(errno != EEXIST) {
 			cerr << "Error: couldn't create intfifo pipe" << endl;
 			exit(-1);
 		}
 	}
-/*	char* charfifo = "charfifo";
-	if(mkfifo("charfifo" , 0777) == -1) {
+/*	if(mkfifo("charfifo" , 0777) == -1) {
 		if(errno != EEXIST) {
 			cerr << "Error: couldn't create charfifo pipe" << endl;
 			exit(-1);
@@ -162,8 +159,8 @@ int main(int argc, char* args[]) {
 	}*/
 
 	int fd1, fd2;
-	fd1 = open(intfifo, O_WRONLY);
-	//fd2 = open(charfifo, O_WRONLY);
+	fd1 = open("intfifo", O_WRONLY);
+	//fd2 = open("charfifo", O_WRONLY);
 
 	//kill(getppid(), SIGUSR1); // Sending coord signal that we're ready to write to pipe
 

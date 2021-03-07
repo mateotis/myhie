@@ -266,107 +266,132 @@ int main(int argc, char* args[]) {
 		}
 
 		pid_t pid;
-		int status = 0;
+		pid = fork(); // Forking the merger node
+		cout << "Starting merger node with PID: " << pid << endl;
+		if(pid < 0) { // Error handling
+			cerr << "Error: could not start merger child process." << endl;
+			return -1;
+		} 
+		else if(pid == 0) { // In merger node
 
-		char* intfifo = "intfifo";
-		if(mkfifo("intfifo" , 0777) == -1) {
-			if(errno != EEXIST) {
-				cerr << "Error: couldn't create intfifo pipe" << endl;
-				exit(-1);
+			if(mkfifo("intfifo" , 0777) == -1) {
+				if(errno != EEXIST) {
+					cerr << "Error: couldn't create intfifo pipe" << endl;
+					exit(-1);
+				}
 			}
-		}
-/*		char* charfifo = "charfifo";
-		if(mkfifo("charfifo" , 0777) == -1) {
-			if(errno != EEXIST) {
-				cerr << "Error: couldn't create charfifo pipe" << endl;
-				exit(-1);
+	/*		if(mkfifo("charfifo" , 0777) == -1) {
+				if(errno != EEXIST) {
+					cerr << "Error: couldn't create charfifo pipe" << endl;
+					exit(-1);
+				}
+			}*/
+
+	/*		Taxpayer** partSortedData = new Taxpayer*[workerNum];
+			for(int i = 0; i < workerNum; i++) {
+				int range = workerRanges[i][1] - workerRanges[i][0] + 1;
+				partSortedData[i] = new Taxpayer[range];
+				cout << "Range: " << range << endl;
+			}*/
+
+			// This was originally a 2D array, which was a simple and intuitive solution - BUT, C++ doesn't allow you to pass arrays with variable sizes to functions, which caused trouble later on in the merging process. So instead I rewrote it to be a regular array and use some clever indexing to fit everything in there in a partially sorted manner.
+			Taxpayer partSortedData[lineCount];
+			int fd1, fd2;
+
+
+			int rid, dep, zip;
+			float income;
+
+
+			cout << "Worker is not allowed to write yet..." << endl;
+			//sleep(3);
+			//kill(pidArray[0], SIGUSR1);
+			//sleep(3);
+			//kill(pidArray[1], SIGUSR1);
+
+	/*		int n; // Number of entries in the worker; the first thing we read from the pipe
+			read(fd1, &n, sizeof(n));
+
+			cout << "n is: " << n << endl;*/
+
+			// A lesson learned the hard way: do NOT mix two pipes with different type variables in them; you'll only get sad and frustrated
+
+			fd1 = open("intfifo",O_RDONLY);
+			//fd2 = open("charfifo",O_RDONLY);
+
+
+			for(int j = 0; j < workerNum; j++) {
+				sleep(1);
+				cout << "Sending signal to child with PID: " << pidArray[j] << endl;
+				kill(pidArray[j], SIGUSR1);
+	/*			char firstName[100];
+				char lastName[100];
+				for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0]+1; i++) { // The order also seems to matter: we take care of the iffy character arrays first before moving onto the nice basic data types
+					read(fd2, firstName, sizeof(firstName));
+					cout << "First name read: " << firstName << endl;
+					read(fd2, lastName, sizeof(lastName));
+					cout << "Last name read: " << lastName << endl;
+
+					string firstNameStr(firstName); // Fortunately, converting back to string from char array is simple
+					string lastNameStr(lastName);
+					partSortedData[j][i].firstName = firstNameStr;
+					partSortedData[j][i].lastName = lastNameStr;
+				}	*/
+				//close(fd2);
+				for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0]+1; i++) {
+					read(fd1, &rid, sizeof(rid));
+					cout << "RID read: " << rid << endl;
+					read(fd1, &dep, sizeof(dep));
+					cout << "Dep read: " << dep << endl;
+					read(fd1, &income, sizeof(income));
+					cout << "Income read: " << income << endl;
+					read(fd1, &zip, sizeof(zip));
+					cout << "Zip read: " << zip << endl;
+
+					// Basically, each element is inserted at i + the starting point of the current worker. This ensures that the data is still 'separated' (as long as you know these starting values for every worker) in a simple one-dimensional array.
+					partSortedData[i+workerRanges[j][0]].rid = rid;
+					partSortedData[i+workerRanges[j][0]].dep = dep;
+					partSortedData[i+workerRanges[j][0]].income = income;
+					partSortedData[i+workerRanges[j][0]].zip = zip;
+				}	
+				//close(fd1);
+				cout << "boop" << endl;
+				sleep(1);
 			}
-		}*/
-
-/*		Taxpayer** partSortedData = new Taxpayer*[workerNum];
-		for(int i = 0; i < workerNum; i++) {
-			int range = workerRanges[i][1] - workerRanges[i][0] + 1;
-			partSortedData[i] = new Taxpayer[range];
-			cout << "Range: " << range << endl;
-		}*/
-		Taxpayer partSortedData[workerNum][lineCount];
-		int fd1, fd2;
-
-
-		int rid, dep, zip;
-		float income;
-		char firstName[100];
-		char lastName[100];
-
-		cout << "Worker is not allowed to write yet..." << endl;
-		//sleep(3);
-		//kill(pidArray[0], SIGUSR1);
-		//sleep(3);
-		//kill(pidArray[1], SIGUSR1);
-
-/*		int n; // Number of entries in the worker; the first thing we read from the pipe
-		read(fd1, &n, sizeof(n));
-
-		cout << "n is: " << n << endl;*/
-
-		// A lesson learned the hard way: do NOT mix two pipes with different type variables in them; you'll only get sad and frustrated
-
-		fd1 = open(intfifo,O_RDONLY);
-		//fd2 = open(charfifo,O_RDONLY);
-		cout << "got here1" << endl;
-
-
-		for(int j = 0; j < workerNum; j++) {
-			sleep(1);
-			cout << "Sending signal to child with PID: " << pidArray[j] << endl;
-			kill(pidArray[j], SIGUSR1);
-			cout << "got here" << endl;
-/*			for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0]+1; i++) { // The order also seems to matter: we take care of the iffy character arrays first before moving onto the nice basic data types
-				read(fd2, firstName, sizeof(firstName));
-				cout << "First name read: " << firstName << endl;
-				read(fd2, lastName, sizeof(lastName));
-				cout << "Last name read: " << lastName << endl;
-
-				string firstNameStr(firstName); // Fortunately, converting back to string from char array is simple
-				string lastNameStr(lastName);
-				partSortedData[j][i].firstName = firstNameStr;
-				partSortedData[j][i].lastName = lastNameStr;
-			}	*/
+			close(fd1);
 			//close(fd2);
-			for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0]+1; i++) {
-				read(fd1, &rid, sizeof(rid));
-				cout << "RID read: " << rid << endl;
-				read(fd1, &dep, sizeof(dep));
-				cout << "Dep read: " << dep << endl;
-				read(fd1, &income, sizeof(income));
-				cout << "Income read: " << income << endl;
-				read(fd1, &zip, sizeof(zip));
-				cout << "Zip read: " << zip << endl;
 
-				partSortedData[j][i].rid = rid;
-				partSortedData[j][i].dep = dep;
-				partSortedData[j][i].income = income;
-				partSortedData[j][i].zip = zip;
-			}	
-			//close(fd1);
-			cout << "boop" << endl;
-			sleep(3);
-		}
-		close(fd1);
-		close(fd2);
+			unlink("intfifo");
+			unlink("charfifo");
 
-		unlink(intfifo);
-		unlink("charfifo");
+			cout << "Before printing" << endl;
+			int j = 0;
+			for(int i = 0; i < lineCount; i++) {
+				if(i == workerRanges[j][0]) { // Whenever we reach the starting index of a worker, we know that the entries afterwards (and until the next starting index) were sorted by that worker
+					cout << "Sorted array received from worker #" << j << endl;
+					j++;
+				}
+				cout << partSortedData[i].rid << " " << partSortedData[i].firstName << " " << partSortedData[i].lastName << " " << partSortedData[i].dep << " " << partSortedData[i].income << " " << partSortedData[i].zip << endl;	
+			}
+/*			for(int j = 0; j < workerNum; j++) {
+				cout << "Sorted array received from worker #" << j << endl;
+				for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0] + 1; i++) { // Print results of parsing
+					cout << partSortedData[j][i].rid << " " << partSortedData[j][i].firstName << " " << partSortedData[j][i].lastName << " " << partSortedData[j][i].dep << " " << partSortedData[j][i].income << " " << partSortedData[j][i].zip << endl;
+				}			
+			}*/
+			cout << "We printed all of that in child with PID " << getpid() << endl;
 
-		cout << "Before printing" << endl;
-		for(int j = 0; j < workerNum; j++) {
-			cout << "Sorted array received from worker #" << j << endl;
-			for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0] + 1; i++) { // Print results of parsing
-				cout << partSortedData[j][i].rid << " " << partSortedData[j][i].firstName << " " << partSortedData[j][i].lastName << " " << partSortedData[j][i].dep << " " << partSortedData[j][i].income << " " << partSortedData[j][i].zip << endl;
-			}			
+			int workerRangeStarts[workerNum]; // An array with just the starting points of each worker; will be sent to the merger
+			for(int i = 0; i < workerNum; i++) {
+				workerRangeStarts[i] = workerRanges[i][0];
+			}
+
+			merge(partSortedData, workerRangeStarts, workerNum, lineCount);
+
+
 		}
 
-
+		int status = 0;
 		//loop to wait for all children
 		while ((pid = wait(&status)) != -1)
 		{
