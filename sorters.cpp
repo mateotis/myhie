@@ -1,4 +1,5 @@
 #include <string>
+#include <fstream> // The merge function writes the sorted array to the specified file
 
 using namespace std;
 
@@ -317,7 +318,7 @@ void bubbleSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { // B
 	}
 }
 
-void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, int lineCount, int attrNum, string sortOrder) {
+void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, int lineCount, int attrNum, string sortOrder, string outputFile) {
 	cout << "In merger!" << endl;
 
 	Taxpayer finalSortedData[lineCount];
@@ -563,6 +564,23 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 	cout << "FINAL SORTED DATA" << endl;
 	for(int i = 0; i < lineCount; i++) {
 		cout << finalSortedData[i].rid << " " << finalSortedData[i].firstName << " " << finalSortedData[i].lastName << " " << finalSortedData[i].dep << " " << finalSortedData[i].income << " " << finalSortedData[i].zip << endl;		
+	}
+
+	ofstream fout;
+	fout.open(outputFile);
+
+	if(fout.is_open()) {
+		for(int i = 0; i < lineCount; i++) {
+			string line = to_string(finalSortedData[i].rid) + " " + finalSortedData[i].firstName + " " + finalSortedData[i].lastName + " " + to_string(finalSortedData[i].dep) + " " + to_string(finalSortedData[i].income) + " " + to_string(finalSortedData[i].zip) + "\n"; // Construct entry line
+
+			fout << line;
+		}
+
+		fout.close();
+	}
+	else {
+		cerr << "Could not open output file!" << endl;
+		return;
 	}
 
 }

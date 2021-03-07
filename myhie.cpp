@@ -29,7 +29,6 @@ static void showReturnStatus(pid_t childpid, int status) // Diagnostic function 
 
 void signalHandler(int signal)
 {
-	cout << "Caught signal " << signal << endl;
 	if(signal==SIGUSR1) {
 		cout << "Root received SIGUSR1 signal: a worker has finished its workload!" << endl;
 	}
@@ -210,6 +209,8 @@ int main(int argc, char* args[]) {
 		return -1;
 	} 
 	else if(pid == 0) { // PID == 0 means we're always in the child, here known as the coordinator node
+
+		// ASSIGNING AND GENERATING WORKER RANGES
 		int workerRanges[workerNum][2]; // 2D array with each entry corresponding to a worker with two ints in it: range start and range end
 		workerRanges[0][0] = 0;
 
@@ -223,8 +224,17 @@ int main(int argc, char* args[]) {
 
 			for(int i = 0; i < workerNum - 1; i++) { // After we have our random numbers, we have to do some sanity checking
 				srand(time(0));
-				while(randNums[i] == 0) { // No number can be 0, since 0 is already the start of worker #1
+				while(randNums[i] == 0) { // No number can be 0, since 0 is already the start of worker #0
 					randNums[i] = rand() % lineCount;
+				}
+
+				for(int j = 0; j < workerNum - 1; j++) { // Checking if any of the numbers match, which is also a no-no as we'll use these as starting indices for the workers
+					if(i != j) {
+						while(randNums[i] == randNums[j]) { // Ensures we don't get the same number *again* on second generation, however rare that might be
+							randNums[i] = rand() % lineCount;
+						}
+					}
+
 				}
 			}
 
@@ -249,7 +259,7 @@ int main(int argc, char* args[]) {
 				currentMin = lineCount;
 			}
 
-			srand(time(0)); // TO-DO: sanity check to ensure that no starting points match
+			srand(time(0));
 			for(int i = 0; i < workerNum; i++) { // Now that we have the starting points, we get the end points to ensure we cover all ground
 				if(i < workerNum - 1) { // Boundary check
 					if(workerRanges[i+1][0] - workerRanges[i][0] == 0) {
@@ -384,21 +394,12 @@ int main(int argc, char* args[]) {
 					partSortedData[i+workerRanges[j][0]].income = income;
 					partSortedData[i+workerRanges[j][0]].zip = zip;
 				}	
-				sleep(1); // A bit of delay to ensure no mixing up the order
+				//sleep(1); // A bit of delay to ensure no mixing up the order
 			}
 			close(fd1);
 
 			// Delete the named pipe - if you don't do this, there might still be data left in it when you next start the program! Definitely caused me a few strange bugs
 			unlink("intfifo");
-
-			int j = 0;
-			for(int i = 0; i < lineCount; i++) {
-				if(i == workerRanges[j][0]) { // Whenever we reach the starting index of a worker, we know that the entries afterwards (and until the next starting index) were sorted by that worker
-					cout << "Sorted array received from worker #" << j << endl;
-					j++;
-				}
-				cout << partSortedData[i].rid << " " << partSortedData[i].firstName << " " << partSortedData[i].lastName << " " << partSortedData[i].dep << " " << partSortedData[i].income << " " << partSortedData[i].zip << endl;	
-			}
 
 			// Because the strings/char arrays really did not want to work well with the pipe, no matter how I sliced it, I decided to take a different approach - with the piping done and partSortedData assembled, we can cross-check the unique RIDs with the initialDataSet we parsed earlier to assign the missing string members before we start the merging process 
 			for(int i = 0; i < lineCount; i++) {
@@ -408,6 +409,15 @@ int main(int argc, char* args[]) {
 						partSortedData[i].lastName = initialDataSet[j].lastName;
 					}
 				}
+			}
+
+			int j = 0;
+			for(int i = 0; i < lineCount; i++) {
+				if(i == workerRanges[j][0]) { // Whenever we reach the starting index of a worker, we know that the entries afterwards (and until the next starting index) were sorted by that worker
+					cout << "Sorted array received from worker #" << j << endl;
+					j++;
+				}
+				cout << partSortedData[i].rid << " " << partSortedData[i].firstName << " " << partSortedData[i].lastName << " " << partSortedData[i].dep << " " << partSortedData[i].income << " " << partSortedData[i].zip << endl;	
 			}
 
 			int workerRangeStarts[workerNum]; // An array with just the starting points of each worker; will be sent to the merger
@@ -422,7 +432,7 @@ int main(int argc, char* args[]) {
 			else {
 				sortOrder = "descending";
 			}
-			merge(partSortedData, workerRangeStarts, workerNum, lineCount, attrNum, sortOrder);
+			merge(partSortedData, workerRangeStarts, workerNum, lineCount, attrNum, sortOrder, outputFile);
 
 			kill(getppid(), SIGUSR2); // After the merging is done, we're done properly - send signal to coord accordingly
 
