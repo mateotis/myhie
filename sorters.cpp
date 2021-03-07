@@ -560,8 +560,6 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 		}
 	}
 
-
-
 	cout << "FINAL SORTED DATA" << endl;
 	for(int i = 0; i < lineCount; i++) {
 		cout << finalSortedData[i].rid << " " << finalSortedData[i].firstName << " " << finalSortedData[i].lastName << " " << finalSortedData[i].dep << " " << finalSortedData[i].income << " " << finalSortedData[i].zip << endl;		

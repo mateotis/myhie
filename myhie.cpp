@@ -30,8 +30,11 @@ static void showReturnStatus(pid_t childpid, int status) // Diagnostic function 
 void signalHandler(int signal)
 {
 	cout << "Caught signal " << signal << endl;
-	if (signal==SIGUSR1) {
-		cout << "SIGUSR1 caught in parent: some worker is ready to write" << endl;
+	if(signal==SIGUSR1) {
+		cout << "Root received SIGUSR1 signal: a worker has finished its workload!" << endl;
+	}
+	else if(signal==SIGUSR2) {
+		cout << "Coord received SIGUSR2 signal: execution is finished! Exiting..." << endl;
 	}
 }
 
@@ -123,13 +126,80 @@ int main(int argc, char* args[]) {
 		return -1;
 	}
 
-	string line;
 	int lineCount = 0;
-	while(getline(fin, line)) { // Measure length of the file, essential to creating our data array
+	string line;
+	while(getline(fin, line)) { // Measuring the number of entries in the input file, needed for our data structures
 		lineCount++;
 	}
 	fin.close();
+
+	Taxpayer initialDataSet[lineCount]; // Array of Taxpayer structs, stored for now; will be used to cross-check and add the strings to the structs during the merge process
+
+	// Open file again, this time to read all the data into the array
+	fin.open(inputFile);
+
+	int readVar = 0; // Which variable we're currently trying to assemble
+	int j = 0; // Used to iterate over the Taxpayer array since we're using a while loop
+	while(getline(fin, line)) { // The random number of spaces between variables is very problematic in trying to parse file input, so we have to construct our strings carefully
+
+		// Initialising everything to strings initially to enable the upcoming heuristic parsing; will convert into proper types afterwards
+		string ridStr = "";
+		string firstName = "";
+		string lastName = "";
+		string depStr = "";
+		string incomeStr = "";
+		string zipStr = "";
+		for(int i = 0; i < line.length(); i++) {
+			if(i != 0 && line[i] != ' ' && line[i-1] == ' ') { // We detect when a new variable arrives by looking ahead: if the current character is whitespace and the next one isn't, then we know that the next one is the start of the new variable, since all variables are separated by at least one whitespace
+				readVar++;
+			}
+			if(line[i] != ' ') { // Adding the actual (read: non whitespace) characters to the appropriate strings
+				if(readVar == 0) {
+					ridStr += line[i];
+				}
+				else if(readVar == 1) {
+					firstName += line[i];
+				}
+				else if(readVar == 2) {
+					lastName += line[i];
+				}
+				else if(readVar == 3) {
+					depStr += line[i];
+				}
+				else if(readVar == 4) {
+					incomeStr += line[i];
+				}
+				else if(readVar == 5) {
+					zipStr += line[i];
+				}
+			}
+			else { // Else, it's a useless space, so we can just ignore it
+				continue;
+			}
+		}
+		readVar = 0;
+
+		// Converting to appropriate types
+		int rid = stoi(ridStr); // A lovely C++11 function that replaces the less stable atoi()
+		int dep = stoi(depStr);
+		int zip = stoi(zipStr);
+		float income = stof(incomeStr); // Ditto, for floats
+
+		// Finally filling up the appropriate struct in the array
+		initialDataSet[j].rid = rid;
+		initialDataSet[j].firstName = firstName;
+		initialDataSet[j].lastName = lastName;
+		initialDataSet[j].dep = dep;
+		initialDataSet[j].income = income;
+		initialDataSet[j].zip = zip;
+
+		j++;
+	}
+
+	fin.close();
 	cout << "File has " << lineCount << " lines." << endl;
+
+	signal(SIGUSR1, signalHandler);
 
 	// Creating the coordinator node and sending it info
 	int fd[2];
@@ -216,7 +286,9 @@ int main(int argc, char* args[]) {
 		// Creating worker children
 
 		pid_t pidArray[workerNum]; // Array to save the child PIDs in, will be useful for signal sending/catching
-		signal(SIGUSR1, signalHandler);
+		signal(SIGUSR2, signalHandler); // Will receive this from the merger node once we're all done
+
+		pid_t rootPID = getppid(); // Saving the PID of root (the parent of coord) to pass to the workers so the workers can later send signals straight to root
 
 		for(int childNum = 0; childNum < workerNum; childNum++) {
 
@@ -235,6 +307,8 @@ int main(int argc, char* args[]) {
 				string rangeEndStr = to_string(workerRanges[childNum][1]);
 				string attrNumStr = to_string(attrNum);
 				string childNumStr = to_string(childNum);
+				string rootPIDStr = to_string(rootPID);
+				string workerName = "worker";
 				string sortOrder = "";
 				if(ascendingOrder == true) {
 					sortOrder = "ascending";
@@ -250,6 +324,8 @@ int main(int argc, char* args[]) {
 				char* attrNumChar = new char[30];
 				char* childNumChar = new char[30];
 				char* sortOrderChar = new char[30];
+				char* rootPIDChar = new char[30];
+				char* workerNameChar = new char[30];
 
 				// As hacky as this seems, this is genuinely the best way I found to convert an int to a char array (by first converting it to a string)
 				strcpy(inputFileChar, inputFile.c_str());
@@ -258,8 +334,10 @@ int main(int argc, char* args[]) {
 				strcpy(attrNumChar, attrNumStr.c_str());
 				strcpy(childNumChar, childNumStr.c_str());
 				strcpy(sortOrderChar, sortOrder.c_str());
+				strcpy(rootPIDChar, rootPIDStr.c_str());
+				strcpy(workerNameChar, workerName.c_str()); // Put the "worker" string into a char array to stop the compiler from complaining that we're using a string in an array of char pointers
 
-				char *arg[] = {"worker",inputFileChar,rangeStartChar, rangeEndChar, attrNumChar, childNumChar, sortOrderChar, NULL}; 
+				char* arg[] = {workerNameChar,inputFileChar,rangeStartChar, rangeEndChar, attrNumChar, childNumChar, sortOrderChar, rootPIDChar, NULL}; 
 				execv("./worker", arg);	
 			}
 		
@@ -274,79 +352,31 @@ int main(int argc, char* args[]) {
 		} 
 		else if(pid == 0) { // In merger node
 
-			if(mkfifo("intfifo" , 0777) == -1) {
+			if(mkfifo("intfifo" , 0777) == -1) { // Create pipe for our numerical variables
 				if(errno != EEXIST) {
 					cerr << "Error: couldn't create intfifo pipe" << endl;
 					exit(-1);
 				}
 			}
-	/*		if(mkfifo("charfifo" , 0777) == -1) {
-				if(errno != EEXIST) {
-					cerr << "Error: couldn't create charfifo pipe" << endl;
-					exit(-1);
-				}
-			}*/
-
-	/*		Taxpayer** partSortedData = new Taxpayer*[workerNum];
-			for(int i = 0; i < workerNum; i++) {
-				int range = workerRanges[i][1] - workerRanges[i][0] + 1;
-				partSortedData[i] = new Taxpayer[range];
-				cout << "Range: " << range << endl;
-			}*/
 
 			// This was originally a 2D array, which was a simple and intuitive solution - BUT, C++ doesn't allow you to pass arrays with variable sizes to functions, which caused trouble later on in the merging process. So instead I rewrote it to be a regular array and use some clever indexing to fit everything in there in a partially sorted manner.
 			Taxpayer partSortedData[lineCount];
-			int fd1, fd2;
-
+			int fd1;
 
 			int rid, dep, zip;
 			float income;
-
-
-			cout << "Worker is not allowed to write yet..." << endl;
-			//sleep(3);
-			//kill(pidArray[0], SIGUSR1);
-			//sleep(3);
-			//kill(pidArray[1], SIGUSR1);
-
-	/*		int n; // Number of entries in the worker; the first thing we read from the pipe
-			read(fd1, &n, sizeof(n));
-
-			cout << "n is: " << n << endl;*/
-
-			// A lesson learned the hard way: do NOT mix two pipes with different type variables in them; you'll only get sad and frustrated
-
 			fd1 = open("intfifo",O_RDONLY);
-			//fd2 = open("charfifo",O_RDONLY);
 
-
-			for(int j = 0; j < workerNum; j++) {
+			for(int j = 0; j < workerNum; j++) { // Letting each worker have their pass at the pipe
 				sleep(1);
 				cout << "Sending signal to child with PID: " << pidArray[j] << endl;
-				kill(pidArray[j], SIGUSR1);
-	/*			char firstName[100];
-				char lastName[100];
-				for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0]+1; i++) { // The order also seems to matter: we take care of the iffy character arrays first before moving onto the nice basic data types
-					read(fd2, firstName, sizeof(firstName));
-					cout << "First name read: " << firstName << endl;
-					read(fd2, lastName, sizeof(lastName));
-					cout << "Last name read: " << lastName << endl;
+				kill(pidArray[j], SIGCONT); // We overload the SIGCONT signal to do what we want as SIGUSR1 and 2 are in use for other, required reasons - besides, it makes sense that we'd use SIGCONT to tell the worker that it can proceed 
 
-					string firstNameStr(firstName); // Fortunately, converting back to string from char array is simple
-					string lastNameStr(lastName);
-					partSortedData[j][i].firstName = firstNameStr;
-					partSortedData[j][i].lastName = lastNameStr;
-				}	*/
-				//close(fd2);
-				for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0]+1; i++) {
+				for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0]+1; i++) { // For each worker, we *strictly* only read as much as it can write to us; that is, its range
 					read(fd1, &rid, sizeof(rid));
-					cout << "RID read: " << rid << endl;
 					read(fd1, &dep, sizeof(dep));
-					cout << "Dep read: " << dep << endl;
 					read(fd1, &income, sizeof(income));
-					cout << "Income read: " << income << endl;
 					read(fd1, &zip, sizeof(zip));
-					cout << "Zip read: " << zip << endl;
 
 					// Basically, each element is inserted at i + the starting point of the current worker. This ensures that the data is still 'separated' (as long as you know these starting values for every worker) in a simple one-dimensional array.
 					partSortedData[i+workerRanges[j][0]].rid = rid;
@@ -354,18 +384,13 @@ int main(int argc, char* args[]) {
 					partSortedData[i+workerRanges[j][0]].income = income;
 					partSortedData[i+workerRanges[j][0]].zip = zip;
 				}	
-				//close(fd1);
-				cout << "boop" << endl;
-				sleep(1);
+				sleep(1); // A bit of delay to ensure no mixing up the order
 			}
 			close(fd1);
-			//close(fd2);
 
-			// Delete the named pipes - if you don't do this, there might still be data left in them when you next start the program! Definitely caused me a few strange bugs
+			// Delete the named pipe - if you don't do this, there might still be data left in it when you next start the program! Definitely caused me a few strange bugs
 			unlink("intfifo");
-			unlink("charfifo");
 
-			cout << "Before printing" << endl;
 			int j = 0;
 			for(int i = 0; i < lineCount; i++) {
 				if(i == workerRanges[j][0]) { // Whenever we reach the starting index of a worker, we know that the entries afterwards (and until the next starting index) were sorted by that worker
@@ -375,7 +400,15 @@ int main(int argc, char* args[]) {
 				cout << partSortedData[i].rid << " " << partSortedData[i].firstName << " " << partSortedData[i].lastName << " " << partSortedData[i].dep << " " << partSortedData[i].income << " " << partSortedData[i].zip << endl;	
 			}
 
-			cout << "We printed all of that in child with PID " << getpid() << endl;
+			// Because the strings/char arrays really did not want to work well with the pipe, no matter how I sliced it, I decided to take a different approach - with the piping done and partSortedData assembled, we can cross-check the unique RIDs with the initialDataSet we parsed earlier to assign the missing string members before we start the merging process 
+			for(int i = 0; i < lineCount; i++) {
+				for(int j = 0; j < lineCount; j++) {
+					if(partSortedData[i].rid == initialDataSet[j].rid) { // Simple O(n^2) matching
+						partSortedData[i].firstName = initialDataSet[j].firstName;
+						partSortedData[i].lastName = initialDataSet[j].lastName;
+					}
+				}
+			}
 
 			int workerRangeStarts[workerNum]; // An array with just the starting points of each worker; will be sent to the merger
 			for(int i = 0; i < workerNum; i++) {
@@ -390,6 +423,8 @@ int main(int argc, char* args[]) {
 				sortOrder = "descending";
 			}
 			merge(partSortedData, workerRangeStarts, workerNum, lineCount, attrNum, sortOrder);
+
+			kill(getppid(), SIGUSR2); // After the merging is done, we're done properly - send signal to coord accordingly
 
 
 		}

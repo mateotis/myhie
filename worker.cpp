@@ -14,12 +14,12 @@
 
 using namespace std;
 
-bool readyToWrite = false;
+bool readyToWrite = false; // Define this as a global variable as we change it from the signal handler which doesn't accept extra parametres
 
 void signalHandler(int signal)
 {
 	cout << "Caught in child signal " << signal << endl;
-	if (signal==SIGUSR1) {
+	if (signal==SIGCONT) { // Getting SIGCONT from coord means the worker is given the go-ahead to write to the pipe
 		cout << "Worker is allowed to write!" << endl;
 		readyToWrite = true;
 	}
@@ -27,9 +27,9 @@ void signalHandler(int signal)
 
 int main(int argc, char* args[]) {
 
-	signal(SIGUSR1, signalHandler);
+	signal(SIGCONT, signalHandler);
 
-	string inputFile, rangeStartStr, rangeEndStr, attrNumStr, workerNumStr, sortOrder;
+	string inputFile, rangeStartStr, rangeEndStr, attrNumStr, workerNumStr, sortOrder, rootPIDStr;
 	clock_t timeStart, timeEnd; // We'll measure the execution time of each worker
 	double execTime;
 
@@ -46,13 +46,14 @@ int main(int argc, char* args[]) {
 	workerNumStr = args[5];
 	int workerNum = stoi(workerNumStr);
 	sortOrder = args[6];
+	rootPIDStr = args[7];
+	int rootPID = stoi(rootPIDStr);
 
 	cout << "Worker #" << workerNum << " started." << endl;
 
 	ifstream fin;
 	fin.open(inputFile);
 
-	int i = 0;
 	Taxpayer dataSet[rangeEnd - rangeStart + 1]; // Array of Taxpayer structs, this is what we'll slice up and pass to all our sorters
 
 	string line;
@@ -140,58 +141,34 @@ int main(int argc, char* args[]) {
 	else {
 		bubbleSort(dataSet, n, attrNum, sortOrder);	
 	}
-	
-/*	for(unsigned int i = 0; i < sizeof(dataSet)/sizeof(dataSet[0]); i++) { // Print results of parsing
-		cout << dataSet[i].rid << " " << dataSet[i].firstName << " " << dataSet[i].lastName << " " << dataSet[i].dep << " " << dataSet[i].income << " " << dataSet[i].zip << endl;
-	}*/
 
-	if(mkfifo("intfifo" , 0777) == -1) {
+	if(mkfifo("intfifo" , 0777) == -1) { // Create pipe for our numerical variables
 		if(errno != EEXIST) {
 			cerr << "Error: couldn't create intfifo pipe" << endl;
 			exit(-1);
 		}
 	}
-/*	if(mkfifo("charfifo" , 0777) == -1) {
-		if(errno != EEXIST) {
-			cerr << "Error: couldn't create charfifo pipe" << endl;
-			exit(-1);
-		}
-	}*/
 
-	int fd1, fd2;
+	int fd1;
 	fd1 = open("intfifo", O_WRONLY);
-	//fd2 = open("charfifo", O_WRONLY);
-
-	//kill(getppid(), SIGUSR1); // Sending coord signal that we're ready to write to pipe
 
 	cout << "Worker #" << workerNum << " waiting to write..." << endl;
 	while(readyToWrite == false) { // Worker waits until it receives the signal from coord that it can write into the pipe
 		sleep(1);
 	}
-	//kill(getppid(), SIGUSR1);
-
-	//write(fd1, &n, sizeof(n));
 
 	cout << "Worker #" << workerNum << " writing to pipe..." << endl;
 
-	// A lesson learned the hard way: do NOT mix two pipes with different type variables in them. You'll only get sad and frustrated
-/*	for(int i = 0; i < n; i++) {
-
-		write(fd2, (dataSet[i].firstName).c_str(), (dataSet[i].firstName).length()+1);
-		write(fd2, (dataSet[i].lastName).c_str(), (dataSet[i].lastName).length()+1);
-	}
-
-	close(fd2);*/
-
-	for(int i = 0; i < n; i++) {
+	for(int i = 0; i < n; i++) { // Only write as much as there are entries
 
 		write(fd1, &dataSet[i].rid, sizeof(dataSet[i].rid));
 		write(fd1, &dataSet[i].dep, sizeof(dataSet[i].dep));
 		write(fd1, &dataSet[i].income, sizeof(dataSet[i].income));
 		write(fd1, &dataSet[i].zip, sizeof(dataSet[i].zip));
 	}
-
 	close(fd1);
+
+	kill(rootPID, SIGUSR1); // Sending SIGUSR1 to root to notify it that this worker has finished
 
 	timeEnd = clock();
 	execTime = (double(timeEnd) - double(timeStart)) / CLOCKS_PER_SEC; // CLOCKS_PER_SEC is a constant defined in ctime
