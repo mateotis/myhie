@@ -11,6 +11,9 @@ struct Taxpayer { // Struct that stores all our data - we don't need a class as 
 	int zip;		
 };
 
+// SORTING ALGORITHMS
+// All three of these sorting algorithms have several variations with minimal changes to cover every order-attribute combination - for the first two, comments are repeated in each variation; for the third, I decided it was tidier to just comment on the first occurences of each algorithm
+
 void insertionSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { // Insertion sort algorithm written from scratch - although it also has O(n^2) time complexity, to my mind it's intuitive and mostly easy to understand 
 	int insertPos;
 	Taxpayer currentEntry;
@@ -57,13 +60,12 @@ void insertionSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { /
 		if(sortOrder == "ascending") {
 
 			for(int i = 1; i < n; i++) {
-				insertPos = i; // Where we're going to insert
-				currentEntry = dataSet[i]; // What we're inserting
+				insertPos = i;
+				currentEntry = dataSet[i];
 
-				while(insertPos > 0 && dataSet[insertPos-1].dep > currentEntry.dep) { // Move entry back as long as its number of dependents is smaller than the previous entry's 
-					dataSet[insertPos] = dataSet[insertPos-1]; // Moving our entry back actually means moving what was previously there, forward - tricky, right?
-					insertPos--; // Keep going backwards until we find the spot
-
+				while(insertPos > 0 && dataSet[insertPos-1].dep > currentEntry.dep) {
+					dataSet[insertPos] = dataSet[insertPos-1];
+					insertPos--;
 				}
 
 				if(insertPos != i) { // If we're not already there, then finally insert the entry to its proper place in the array
@@ -315,43 +317,250 @@ void bubbleSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { // B
 	}
 }
 
-void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, int lineCount) {
+void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, int lineCount, int attrNum, string sortOrder) {
 	cout << "In merger!" << endl;
 
 	Taxpayer finalSortedData[lineCount];
 	int workerIterators[workerNum] = {0}; // Iterators used by the merging algorithm
 
-	// The merger checks the first elements of every sub-array, looking for the smallest/largest value, then it advances the iterator of that sub-array before moving onto the next value
-	int currentMin = 9999999;
-	int currentMinWorker = 0;
-	Taxpayer currentTaxpayer;
-	for(int i = 0; i < lineCount; i++) {
-		for(int j = 0; j < workerNum; j++) {
-			if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
-				continue;
+	// The merger checks the first elements of every sub-array, looking for the smallest/largest value, then it advances the iterator of that sub-array before moving onto the next value, steadily filling up the final sorted array as such
+
+	// As with the other sorting algos in this file, we need to have a version for every potential order-attribute combination
+
+	if(attrNum == 0) { // Sorting by RID
+		if(sortOrder == "ascending") {
+			int currentMin = 9999999;
+			int currentMinWorker = 0;
+			Taxpayer currentTaxpayer;
+			for(int i = 0; i < lineCount; i++) {
+				for(int j = 0; j < workerNum; j++) {
+					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
+						continue;
+					}
+					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
+						continue;
+					}
+			
+					if(partSortedData[workerRangeStarts[j] + workerIterators[j]].rid < currentMin) { // If you remember, we did the same indexing when we first assembled partSortedData - adding the starting point of the worker to the current position of the iterator - except back there the iterator was just i, here it's a whole array of them!
+						currentTaxpayer = partSortedData[workerRangeStarts[j] + workerIterators[j]];
+						currentMin = partSortedData[workerRangeStarts[j] + workerIterators[j]].rid;
+						currentMinWorker = j;
+					}
+				}
+
+				finalSortedData[i] = currentTaxpayer;
+				workerIterators[currentMinWorker]++; // Advance the iterator of the sub-array where we found the right element, to ensure that we don't consider it again
+
+				currentMin = 9999999;
+				currentMinWorker = 0;
+
 			}
-			if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
-				continue;
-			}
-			cout << "Worker #" << j << ": Checking " << partSortedData[workerRangeStarts[j] + workerIterators[j]].rid << " against " << currentMin << endl;			
-			if(partSortedData[workerRangeStarts[j] + workerIterators[j]].rid < currentMin) {
-				currentTaxpayer = partSortedData[workerRangeStarts[j] + workerIterators[j]];
-				currentMin = partSortedData[workerRangeStarts[j] + workerIterators[j]].rid;
-				currentMinWorker = j;
-			}
-			//cout << "First element for worker #" << j << ": " << partSortedData[j+workerRangeStarts[j]].rid << endl;
 		}
-		//cout << "Selected RID is: " << currentTaxpayer.rid << endl;
-		finalSortedData[i] = currentTaxpayer;
-		workerIterators[currentMinWorker]++; // Advance the iterator of the sub-array where we found the right element, to ensure that we don't consider it again
+		else { // When we're sorting by descending order, we flip min to max and also the relation sign, otherwise the algorithm is the same
+			int currentMax = 0;
+			int currentMaxWorker = 0;
+			Taxpayer currentTaxpayer;
+			for(int i = 0; i < lineCount; i++) {
+				for(int j = 0; j < workerNum; j++) {
+					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) {
+						continue;
+					}
+					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) {
+						continue;
+					}
 
-		cout << "Iterator for worker #" << currentMinWorker << " is now: " << workerIterators[currentMinWorker] << endl;
+					if(partSortedData[workerRangeStarts[j] + workerIterators[j]].rid > currentMax) { // Flipping things here specifically
+						currentTaxpayer = partSortedData[workerRangeStarts[j] + workerIterators[j]];
+						currentMax = partSortedData[workerRangeStarts[j] + workerIterators[j]].rid;
+						currentMaxWorker = j;
+					}
+				}
 
-		currentMin = 9999999;
-		currentMinWorker = 0;
+				finalSortedData[i] = currentTaxpayer;
+				workerIterators[currentMaxWorker]++;
 
+				currentMax = 0;
+				currentMaxWorker = 0;
 
+			}
+		}
 	}
+	else if(attrNum == 3) { // By number of dependents
+		if(sortOrder == "ascending") {
+			int currentMin = 9999999;
+			int currentMinWorker = 0;
+			Taxpayer currentTaxpayer;
+			for(int i = 0; i < lineCount; i++) {
+				for(int j = 0; j < workerNum; j++) {
+					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) {
+						continue;
+					}
+					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) {
+						continue;
+					}
+			
+					if(partSortedData[workerRangeStarts[j] + workerIterators[j]].dep < currentMin) {
+						currentTaxpayer = partSortedData[workerRangeStarts[j] + workerIterators[j]];
+						currentMin = partSortedData[workerRangeStarts[j] + workerIterators[j]].dep;
+						currentMinWorker = j;
+					}
+				}
+
+				finalSortedData[i] = currentTaxpayer;
+				workerIterators[currentMinWorker]++;
+
+				currentMin = 9999999;
+				currentMinWorker = 0;
+
+			}
+		}
+		else {
+			int currentMax = -1; // Number of dependents can legitimately be 0, so currentMax is one less here to avoid issues 
+			int currentMaxWorker = 0;
+			Taxpayer currentTaxpayer;
+			for(int i = 0; i < lineCount; i++) {
+				for(int j = 0; j < workerNum; j++) {
+					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) {
+						continue;
+					}
+					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) {
+						continue;
+					}
+
+					if(partSortedData[workerRangeStarts[j] + workerIterators[j]].dep > currentMax) {
+						currentTaxpayer = partSortedData[workerRangeStarts[j] + workerIterators[j]];
+						currentMax = partSortedData[workerRangeStarts[j] + workerIterators[j]].dep;
+						currentMaxWorker = j;
+					}
+				}
+
+				finalSortedData[i] = currentTaxpayer;
+				workerIterators[currentMaxWorker]++;
+
+				currentMax = -1;
+				currentMaxWorker = 0;
+
+			}
+		}
+	}
+	else if(attrNum == 4) { // By income
+		if(sortOrder == "ascending") {
+			int currentMin = 9999999;
+			int currentMinWorker = 0;
+			Taxpayer currentTaxpayer;
+			for(int i = 0; i < lineCount; i++) {
+				for(int j = 0; j < workerNum; j++) {
+					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
+						continue;
+					}
+					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
+						continue;
+					}
+			
+					if(partSortedData[workerRangeStarts[j] + workerIterators[j]].income < currentMin) { // If you remember, we did the same indexing when we first assembled partSortedData - adding the starting point of the worker to the current position of the iterator - except back there the iterator was just i, here it's a whole array of them!
+						currentTaxpayer = partSortedData[workerRangeStarts[j] + workerIterators[j]];
+						currentMin = partSortedData[workerRangeStarts[j] + workerIterators[j]].income;
+						currentMinWorker = j;
+					}
+				}
+
+				finalSortedData[i] = currentTaxpayer;
+				workerIterators[currentMinWorker]++; // Advance the iterator of the sub-array where we found the right element, to ensure that we don't consider it again
+
+				currentMin = 9999999;
+				currentMinWorker = 0;
+
+			}
+		}
+		else { // When we're sorting by descending order, we flip min to max and also the relation sign, otherwise the algorithm is the same
+			int currentMax = 0;
+			int currentMaxWorker = 0;
+			Taxpayer currentTaxpayer;
+			for(int i = 0; i < lineCount; i++) {
+				for(int j = 0; j < workerNum; j++) {
+					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) {
+						continue;
+					}
+					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) {
+						continue;
+					}
+
+					if(partSortedData[workerRangeStarts[j] + workerIterators[j]].income > currentMax) { // Flipping things here specifically
+						currentTaxpayer = partSortedData[workerRangeStarts[j] + workerIterators[j]];
+						currentMax = partSortedData[workerRangeStarts[j] + workerIterators[j]].income;
+						currentMaxWorker = j;
+					}
+				}
+
+				finalSortedData[i] = currentTaxpayer;
+				workerIterators[currentMaxWorker]++;
+
+				currentMax = 0;
+				currentMaxWorker = 0;
+
+			}
+		}
+	}
+	else if(attrNum == 5) { // By zip code
+		if(sortOrder == "ascending") {
+			int currentMin = 9999999;
+			int currentMinWorker = 0;
+			Taxpayer currentTaxpayer;
+			for(int i = 0; i < lineCount; i++) {
+				for(int j = 0; j < workerNum; j++) {
+					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
+						continue;
+					}
+					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
+						continue;
+					}
+			
+					if(partSortedData[workerRangeStarts[j] + workerIterators[j]].zip < currentMin) { // If you remember, we did the same indexing when we first assembled partSortedData - adding the starting point of the worker to the current position of the iterator - except back there the iterator was just i, here it's a whole array of them!
+						currentTaxpayer = partSortedData[workerRangeStarts[j] + workerIterators[j]];
+						currentMin = partSortedData[workerRangeStarts[j] + workerIterators[j]].zip;
+						currentMinWorker = j;
+					}
+				}
+
+				finalSortedData[i] = currentTaxpayer;
+				workerIterators[currentMinWorker]++; // Advance the iterator of the sub-array where we found the right element, to ensure that we don't consider it again
+
+				currentMin = 9999999;
+				currentMinWorker = 0;
+
+			}
+		}
+		else { // When we're sorting by descending order, we flip min to max and also the relation sign, otherwise the algorithm is the same
+			int currentMax = 0;
+			int currentMaxWorker = 0;
+			Taxpayer currentTaxpayer;
+			for(int i = 0; i < lineCount; i++) {
+				for(int j = 0; j < workerNum; j++) {
+					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) {
+						continue;
+					}
+					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) {
+						continue;
+					}
+
+					if(partSortedData[workerRangeStarts[j] + workerIterators[j]].zip > currentMax) { // Flipping things here specifically
+						currentTaxpayer = partSortedData[workerRangeStarts[j] + workerIterators[j]];
+						currentMax = partSortedData[workerRangeStarts[j] + workerIterators[j]].zip;
+						currentMaxWorker = j;
+					}
+				}
+
+				finalSortedData[i] = currentTaxpayer;
+				workerIterators[currentMaxWorker]++;
+
+				currentMax = 0;
+				currentMaxWorker = 0;
+
+			}
+		}
+	}
+
+
 
 	cout << "FINAL SORTED DATA" << endl;
 	for(int i = 0; i < lineCount; i++) {

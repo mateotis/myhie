@@ -361,6 +361,7 @@ int main(int argc, char* args[]) {
 			close(fd1);
 			//close(fd2);
 
+			// Delete the named pipes - if you don't do this, there might still be data left in them when you next start the program! Definitely caused me a few strange bugs
 			unlink("intfifo");
 			unlink("charfifo");
 
@@ -373,12 +374,7 @@ int main(int argc, char* args[]) {
 				}
 				cout << partSortedData[i].rid << " " << partSortedData[i].firstName << " " << partSortedData[i].lastName << " " << partSortedData[i].dep << " " << partSortedData[i].income << " " << partSortedData[i].zip << endl;	
 			}
-/*			for(int j = 0; j < workerNum; j++) {
-				cout << "Sorted array received from worker #" << j << endl;
-				for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0] + 1; i++) { // Print results of parsing
-					cout << partSortedData[j][i].rid << " " << partSortedData[j][i].firstName << " " << partSortedData[j][i].lastName << " " << partSortedData[j][i].dep << " " << partSortedData[j][i].income << " " << partSortedData[j][i].zip << endl;
-				}			
-			}*/
+
 			cout << "We printed all of that in child with PID " << getpid() << endl;
 
 			int workerRangeStarts[workerNum]; // An array with just the starting points of each worker; will be sent to the merger
@@ -386,7 +382,14 @@ int main(int argc, char* args[]) {
 				workerRangeStarts[i] = workerRanges[i][0];
 			}
 
-			merge(partSortedData, workerRangeStarts, workerNum, lineCount);
+			string sortOrder = "";
+			if(ascendingOrder == true) {
+				sortOrder = "ascending";
+			}
+			else {
+				sortOrder = "descending";
+			}
+			merge(partSortedData, workerRangeStarts, workerNum, lineCount, attrNum, sortOrder);
 
 
 		}
