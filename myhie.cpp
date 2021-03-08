@@ -221,25 +221,34 @@ int main(int argc, char* args[]) {
 				randNums[i] = rand() % lineCount;
 			}
 
-			for(int i = 0; i < workerNum - 1; i++) { // After we have our random numbers, we have to do some sanity checking
+			// After we have our random numbers, we have to do some sanity checking
+			for(int i = 0; i < workerNum - 1; i++) {
 
 				while(randNums[i] == 0) { // No number can be 0, since 0 is already the start of worker #0
 					srand(time(0));
 					randNums[i] = rand() % lineCount;
 				}
+			}
 
-				for(int j = 0; j < workerNum - 1; j++) { // Checking if any of the numbers match, which is also a no-no as we'll use these as starting indices for the workers
-					if(i != j) {
-						while(randNums[i] == randNums[j]) { // Ensures we don't get the same number *again* on second generation, however rare that might be
-							srand(time(0));
-							cout << "Random numbers " << randNums[i] << " and " << randNums[j] << " match!" << endl;
-							randNums[i] = rand() % lineCount;
-							cout << "New random number: " << randNums[i] << endl;
+			bool anyMatches = false;
+			// This set of loops checks and rectifies any matching numbers very exhaustively. If a number matches *any* of the *other* numbers in our list, it rerolls that number and sets the do-while condition to true, which means that the whole procedure repeats at least once more. The loop ends when every number is unique. While this might seem overkill, it's honestly the simplest way I found that 100% ensures no repetition.
+
+			// That said, it can drastically increase run time if the user picks an absurdly high number of workers when compared to the input size like say, 50 workers for 100 entries.
+			do {
+				anyMatches = false;
+				for(int i = 0; i < workerNum - 1; i++) {
+					for(int j = 0; j < workerNum - 1; j++) {
+						if(i != j) {
+							if(randNums[i] == randNums[j]) {
+								anyMatches = true; // We'll repeat the while loop to make sure nothing gets past
+								srand(time(0));
+								randNums[i] = rand() % lineCount; // Reroll matching number
+							}
 						}
 					}
-
 				}
 			}
+			while(anyMatches == true);
 
 			cout << "Our random numbers are: ";
 			for(int i = 0; i < workerNum - 1; i++) {
@@ -265,7 +274,7 @@ int main(int argc, char* args[]) {
 			srand(time(0));
 			for(int i = 0; i < workerNum; i++) { // Now that we have the starting points, we get the end points to ensure we cover all ground
 				if(i < workerNum - 1) { // Boundary check
-					if(workerRanges[i+1][0] - workerRanges[i][0] == 0) {
+					if(workerRanges[i+1][0] - workerRanges[i][0] == 0) { // This should never occur as we ensure there are no repetitions earlier - but hey, crazier things have happened, and it's better to be safe than sorry
 						cerr << "Error: worker starting points match!" << endl;
 						return -1;
 					}
