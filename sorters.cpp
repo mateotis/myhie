@@ -16,6 +16,7 @@ void insertionSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { /
 		if(sortOrder == "ascending") {
 
 			for(int i = 1; i < n; i++) {
+
 				insertPos = i; // Where we're going to insert
 				currentEntry = dataSet[i]; // What we're inserting
 
@@ -29,7 +30,9 @@ void insertionSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { /
 					dataSet[insertPos] = currentEntry; // This moves the whole struct, without having to move members separately, quite efficient
 				}
 				
-			}		
+			}
+
+			cout << "insertion sort finished" << endl;
 		}
 		else { // Sort in descending order - essentially the same algorithm, just with a flipped relation check
 
@@ -314,7 +317,7 @@ void bubbleSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { // B
 void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, int lineCount, int attrNum, string sortOrder, string outputFile) {
 	cout << "In merger!" << endl;
 
-	Taxpayer finalSortedData[lineCount];
+	Taxpayer* finalSortedData = new Taxpayer[lineCount];
 	int workerIterators[workerNum] = {0}; // Iterators used by the merging algorithm
 
 	// The merger checks the first elements of every sub-array, looking for the smallest/largest value, then it advances the iterator of that sub-array before moving onto the next value, steadily filling up the final sorted array as such
@@ -571,6 +574,8 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 		}
 	}
 
+	delete[] partSortedData;
+
 	cout << "FINAL SORTED DATA" << endl;
 	for(int i = 0; i < lineCount; i++) {
 		cout << finalSortedData[i].rid << " " << finalSortedData[i].firstName << " " << finalSortedData[i].lastName << " " << finalSortedData[i].dep << " " << finalSortedData[i].income << " " << finalSortedData[i].zip << endl;		
@@ -587,10 +592,12 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 		}
 
 		fout.close();
+		delete[] finalSortedData;
 	}
 	else {
 		cerr << "Could not open output file!" << endl;
 		return;
+		delete[] finalSortedData;
 	}
 
 }

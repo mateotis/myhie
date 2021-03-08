@@ -54,7 +54,7 @@ int main(int argc, char* args[]) {
 	ifstream fin;
 	fin.open(inputFile);
 
-	Taxpayer dataSet[rangeEnd - rangeStart + 1]; // Array of Taxpayer structs, this is what we'll slice up and pass to all our sorters
+	Taxpayer* dataSet = new Taxpayer[rangeEnd - rangeStart + 1]; // Array of Taxpayer structs, this is what we'll slice up and pass to all our sorters
 
 	string line;
 	int readVar = 0; // Which variable we're currently trying to assemble
@@ -132,7 +132,7 @@ int main(int argc, char* args[]) {
 		cout << "Sorting with bubble sort." << endl;
 	}	
 
-	int n = sizeof(dataSet)/sizeof(dataSet[0]); // Calculate array size
+	int n = rangeEnd - rangeStart + 1; // Calculate array size
 
 	// Invoke one of two sorters based on worker number - even-numbered ones use insertion, odd-numbered ones use bubble
 	if(workerNum % 2 == 0) {

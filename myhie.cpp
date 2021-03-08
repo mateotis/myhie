@@ -382,7 +382,7 @@ int main(int argc, char* args[]) {
 			}
 
 			// This was originally a 2D array, which was a simple and intuitive solution - BUT, C++ doesn't allow you to pass arrays with variable sizes to functions, which caused trouble later on in the merging process. So instead I rewrote it to be a regular array and use some clever indexing to fit everything in there in a partially sorted manner.
-			Taxpayer partSortedData[lineCount];
+			Taxpayer* partSortedData = new Taxpayer[lineCount];
 			int fd1;
 
 			int rid, dep, zip;
@@ -405,7 +405,9 @@ int main(int argc, char* args[]) {
 					partSortedData[i+workerRanges[j][0]].dep = dep;
 					partSortedData[i+workerRanges[j][0]].income = income;
 					partSortedData[i+workerRanges[j][0]].zip = zip;
-				}	
+				}
+
+				cout << "End of pipe loop iteration" << endl;
 				//sleep(1); // A bit of delay to ensure no mixing up the order
 			}
 			close(fd1);
@@ -422,6 +424,8 @@ int main(int argc, char* args[]) {
 					}
 				}
 			}
+
+			//delete[] initialDataSet; // No longer need this array, so we're freeing up the memory
 
 			int j = 0;
 			for(int i = 0; i < lineCount; i++) {
@@ -459,6 +463,7 @@ int main(int argc, char* args[]) {
 			//call function to display return status of child with this pid
 			showReturnStatus(pid, status);			
 		}
+		delete[] initialDataSet;
 
 
 
@@ -466,6 +471,8 @@ int main(int argc, char* args[]) {
 	else { // Parents waits for coord to finish
 		wait(NULL);
 		cout << "Coord child finished running." << endl;
+
+		delete[] initialDataSet;
 
 		timeEnd = clock();
 		execTime = (double(timeEnd) - double(timeStart)) / CLOCKS_PER_SEC; // CLOCKS_PER_SEC is a constant defined in ctime
