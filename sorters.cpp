@@ -1,16 +1,9 @@
-#include <string>
+#include <iostream>
 #include <fstream> // The merge function writes the sorted array to the specified file
 
-using namespace std;
+#include "sorters.h"
 
-struct Taxpayer { // Struct that stores all our data - we don't need a class as you don't really modify this data, you just sort it
-	int rid;
-	string firstName;
-	string lastName;
-	int dep;
-	float income;
-	int zip;		
-};
+using namespace std;
 
 // SORTING ALGORITHMS
 // All three of these sorting algorithms have several variations with minimal changes to cover every order-attribute combination - for the first two, comments are repeated in each variation; for the third, I decided it was tidier to just comment on the first occurences of each algorithm
@@ -335,10 +328,12 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 			Taxpayer currentTaxpayer;
 			for(int i = 0; i < lineCount; i++) {
 				for(int j = 0; j < workerNum; j++) {
-					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
-						continue;
+					if(j == workerNum - 1) { // Crucial to ensure that the last worker is ALWAYS handled differently - had a crazy bug where this loop would just skip the last worker's sub-array entirely because it kept triggering the else if
+						if(workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
+							continue;
+						}
 					}
-					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
+					else if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
 						continue;
 					}
 			
@@ -363,17 +358,20 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 			Taxpayer currentTaxpayer;
 			for(int i = 0; i < lineCount; i++) {
 				for(int j = 0; j < workerNum; j++) {
-					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) {
-						continue;
+					if(j == workerNum - 1) { // Crucial to ensure that the last worker is ALWAYS handled differently - had a crazy bug where this loop would just skip the last worker's sub-array entirely because it kept triggering the else if
+						if(workerIterators[j] > lineCount - workerRangeStarts[j] - 1) {
+							continue;
+						}
 					}
-					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) {
+					else if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) {
 						continue;
 					}
 
 					if(partSortedData[workerRangeStarts[j] + workerIterators[j]].rid > currentMax) { // Flipping things here specifically
+
 						currentTaxpayer = partSortedData[workerRangeStarts[j] + workerIterators[j]];
 						currentMax = partSortedData[workerRangeStarts[j] + workerIterators[j]].rid;
-						currentMaxWorker = j;
+						currentMaxWorker = j;				
 					}
 				}
 
@@ -393,10 +391,12 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 			Taxpayer currentTaxpayer;
 			for(int i = 0; i < lineCount; i++) {
 				for(int j = 0; j < workerNum; j++) {
-					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) {
-						continue;
+					if(j == workerNum - 1) { // Crucial to ensure that the last worker is ALWAYS handled differently - had a crazy bug where this loop would just skip the last worker's sub-array entirely because it kept triggering the else if
+						if(workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
+							continue;
+						}
 					}
-					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) {
+					else if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
 						continue;
 					}
 			
@@ -421,10 +421,12 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 			Taxpayer currentTaxpayer;
 			for(int i = 0; i < lineCount; i++) {
 				for(int j = 0; j < workerNum; j++) {
-					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) {
-						continue;
+					if(j == workerNum - 1) { // Crucial to ensure that the last worker is ALWAYS handled differently - had a crazy bug where this loop would just skip the last worker's sub-array entirely because it kept triggering the else if
+						if(workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
+							continue;
+						}
 					}
-					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) {
+					else if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
 						continue;
 					}
 
@@ -451,10 +453,12 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 			Taxpayer currentTaxpayer;
 			for(int i = 0; i < lineCount; i++) {
 				for(int j = 0; j < workerNum; j++) {
-					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
-						continue;
+					if(j == workerNum - 1) { // Crucial to ensure that the last worker is ALWAYS handled differently - had a crazy bug where this loop would just skip the last worker's sub-array entirely because it kept triggering the else if
+						if(workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
+							continue;
+						}
 					}
-					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
+					else if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
 						continue;
 					}
 			
@@ -479,10 +483,12 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 			Taxpayer currentTaxpayer;
 			for(int i = 0; i < lineCount; i++) {
 				for(int j = 0; j < workerNum; j++) {
-					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) {
-						continue;
+					if(j == workerNum - 1) { // Crucial to ensure that the last worker is ALWAYS handled differently - had a crazy bug where this loop would just skip the last worker's sub-array entirely because it kept triggering the else if
+						if(workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
+							continue;
+						}
 					}
-					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) {
+					else if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
 						continue;
 					}
 
@@ -509,10 +515,12 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 			Taxpayer currentTaxpayer;
 			for(int i = 0; i < lineCount; i++) {
 				for(int j = 0; j < workerNum; j++) {
-					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
-						continue;
+					if(j == workerNum - 1) { // Crucial to ensure that the last worker is ALWAYS handled differently - had a crazy bug where this loop would just skip the last worker's sub-array entirely because it kept triggering the else if
+						if(workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
+							continue;
+						}
 					}
-					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
+					else if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
 						continue;
 					}
 			
@@ -537,10 +545,12 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 			Taxpayer currentTaxpayer;
 			for(int i = 0; i < lineCount; i++) {
 				for(int j = 0; j < workerNum; j++) {
-					if(j == workerNum - 1 && workerIterators[j] > lineCount - workerRangeStarts[j] - 1) {
-						continue;
+					if(j == workerNum - 1) { // Crucial to ensure that the last worker is ALWAYS handled differently - had a crazy bug where this loop would just skip the last worker's sub-array entirely because it kept triggering the else if
+						if(workerIterators[j] > lineCount - workerRangeStarts[j] - 1) { // Special case for the last worker, as the workerRangeStarts[j+1] condition in the proceeding condition would be out of bounds - instead, we can simply get the range of the last worker by subtracting its starting point from the total number of entries 
+							continue;
+						}
 					}
-					if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) {
+					else if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
 						continue;
 					}
 

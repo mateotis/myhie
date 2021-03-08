@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <ctime>
 
-#include "sorters.cpp"
+#include "sorters.h"
 
 using namespace std;
 

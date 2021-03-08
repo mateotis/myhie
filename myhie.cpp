@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <string> // Yay!
 #include <cstring> // For strcmp and strcpy
 #include <cstdio>
 #include <cstdlib>
@@ -11,7 +10,7 @@
 #include <sys/stat.h> 
 #include <sys/types.h> 
 
-#include "sorters.cpp"
+#include "sorters.h"
 
 using namespace std;
 
@@ -132,7 +131,7 @@ int main(int argc, char* args[]) {
 	}
 	fin.close();
 
-	Taxpayer initialDataSet[lineCount]; // Array of Taxpayer structs, stored for now; will be used to cross-check and add the strings to the structs during the merge process
+	Taxpayer* initialDataSet = new Taxpayer[lineCount]; // Array of Taxpayer structs, stored for now; will be used to cross-check and add the strings to the structs during the merge process. Needs to be dynamically allocated as processing large inputs would take up too much space on the stack!
 
 	// Open file again, this time to read all the data into the array
 	fin.open(inputFile);
@@ -223,15 +222,19 @@ int main(int argc, char* args[]) {
 			}
 
 			for(int i = 0; i < workerNum - 1; i++) { // After we have our random numbers, we have to do some sanity checking
-				srand(time(0));
+
 				while(randNums[i] == 0) { // No number can be 0, since 0 is already the start of worker #0
+					srand(time(0));
 					randNums[i] = rand() % lineCount;
 				}
 
 				for(int j = 0; j < workerNum - 1; j++) { // Checking if any of the numbers match, which is also a no-no as we'll use these as starting indices for the workers
 					if(i != j) {
 						while(randNums[i] == randNums[j]) { // Ensures we don't get the same number *again* on second generation, however rare that might be
+							srand(time(0));
+							cout << "Random numbers " << randNums[i] << " and " << randNums[j] << " match!" << endl;
 							randNums[i] = rand() % lineCount;
+							cout << "New random number: " << randNums[i] << endl;
 						}
 					}
 
