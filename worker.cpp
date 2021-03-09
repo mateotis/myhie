@@ -18,9 +18,7 @@ bool readyToWrite = false; // Define this as a global variable as we change it f
 
 void signalHandler(int signal)
 {
-	cout << "Caught in child signal " << signal << endl;
 	if (signal==SIGCONT) { // Getting SIGCONT from coord means the worker is given the go-ahead to write to the pipe
-		cout << "Worker is allowed to write!" << endl;
 		readyToWrite = true;
 	}
 }
@@ -124,22 +122,14 @@ int main(int argc, char* args[]) {
 
 	fin.close();
 
-	cout << "\n" << "Worker #" << workerNum << " output in range " << rangeStart << " - " << rangeEnd << endl;
-	if(workerNum % 2 == 0) {
-		cout << "Sorting with insertion sort." << endl;
-	}
-	else {
-		cout << "Sorting with bubble sort." << endl;
-	}	
-
 	int n = rangeEnd - rangeStart + 1; // Calculate array size
 
 	// Invoke one of two sorters based on worker number - even-numbered ones use insertion, odd-numbered ones use bubble
 	if(workerNum % 2 == 0) {
-		insertionSort(dataSet, n, attrNum, sortOrder);
+		insertionSort(dataSet, n, attrNum, sortOrder, workerNum);
 	}
 	else {
-		bubbleSort(dataSet, n, attrNum, sortOrder);	
+		bubbleSort(dataSet, n, attrNum, sortOrder, workerNum);	
 	}
 
 	if(mkfifo("intfifo" , 0777) == -1) { // Create pipe for our numerical variables
@@ -152,12 +142,9 @@ int main(int argc, char* args[]) {
 	int fd1;
 	fd1 = open("intfifo", O_WRONLY);
 
-	cout << "Worker #" << workerNum << " waiting to write..." << endl;
 	while(readyToWrite == false) { // Worker waits until it receives the signal from coord that it can write into the pipe
 		sleep(1);
 	}
-
-	cout << "Worker #" << workerNum << " writing to pipe..." << endl;
 
 	for(int i = 0; i < n; i++) { // Only write as much as there are entries
 
@@ -173,7 +160,7 @@ int main(int argc, char* args[]) {
 	timeEnd = clock();
 	execTime = (double(timeEnd) - double(timeStart)) / CLOCKS_PER_SEC; // CLOCKS_PER_SEC is a constant defined in ctime
 
-	cout << "Execution time for worker #" << workerNum << ": " << execTime << " seconds." << endl; 
+	//cout << "Execution time for worker #" << workerNum << ": " << execTime << " seconds." << endl; 
 
 	return 0;
 

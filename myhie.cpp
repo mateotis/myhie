@@ -9,30 +9,36 @@
 #include <fcntl.h>
 #include <sys/stat.h> 
 #include <sys/types.h> 
+#include <chrono>
 
 #include "sorters.h"
 
 using namespace std;
 
+int sigusr1Num = 0; // Declaring the number of signals caught as global variables so we can increment them in the signal handler
+int sigusr2Num = 0;
+
 static void showReturnStatus(pid_t childpid, int status) // Diagnostic function taken from an OS lab
 {
-	if (WIFEXITED(status) && !WEXITSTATUS(status))
+/*	if (WIFEXITED(status) && !WEXITSTATUS(status))
 		printf("Child %ld terminated normally\n", (long)childpid);
 	else if (WIFEXITED(status))
 		printf("Child %ld terminated with return status %d\n", (long)childpid, WEXITSTATUS(status));
 	else if (WIFSIGNALED(status))
 		printf("Child %ld terminated due to uncaught signal %d\n", (long)childpid, WTERMSIG(status));
 	else if (WIFSTOPPED(status))
-		printf("Child %ld stopped due to signal %d\n", (long)childpid, WSTOPSIG(status));
+		printf("Child %ld stopped due to signal %d\n", (long)childpid, WSTOPSIG(status));*/
 }
 
 void signalHandler(int signal)
 {
 	if(signal==SIGUSR1) {
-		cout << "Root received SIGUSR1 signal: a worker has finished its workload!" << endl;
+		//cout << "Root received SIGUSR1 signal: a worker has finished its workload!" << endl;
+		sigusr1Num++;
 	}
 	else if(signal==SIGUSR2) {
 		cout << "Coord received SIGUSR2 signal: execution is finished! Exiting..." << endl;
+		sigusr2Num++;
 	}
 }
 
@@ -51,6 +57,10 @@ int main(int argc, char* args[]) {
 	double execTime;
 
 	timeStart = clock();
+
+	chrono::time_point<chrono::system_clock> start, end; 
+
+	start = chrono::system_clock::now(); 
 
 	for(int i = 0; i < argc; i++) {
 		if(strcmp(args[i], "-i") == 0) { // Parameter parsing code adapted from my mvote program, except we have many more params here
@@ -250,12 +260,6 @@ int main(int argc, char* args[]) {
 			}
 			while(anyMatches == true);
 
-			cout << "Our random numbers are: ";
-			for(int i = 0; i < workerNum - 1; i++) {
-				cout << randNums[i] << " ";
-			}
-			cout << endl;
-
 			int currentMin = lineCount; // One higher than any of the possible random values we generated
 			int currentMinLoc = 0;
 			for(int i = 1; i < workerNum; i++) { // My trusty selection sort algorithm is deployed once again, this time to fill up a sorted array in ascending order!
@@ -301,6 +305,7 @@ int main(int argc, char* args[]) {
 			}
 		}
 
+		cout << "Worker ranges generated." << endl;
 		for(int i = 0; i < workerNum; i++) {
 			cout << "Worker #" << i << " range is: " << workerRanges[i][0] << " - " << workerRanges[i][1] << endl;
 		}
@@ -317,14 +322,12 @@ int main(int argc, char* args[]) {
 			pid_t pid;
 			pid = fork(); // First we fork it
 			pidArray[childNum] = pid;
-			cout << "Child PID: " << pid << endl;
 
 			if(pid < 0) { // Error handling
 				cerr << "Error: could not start worker child process." << endl;
 				return -1;
 			} 
 			else if(pid == 0) { // Worker child, we pass to it the file it needs to read, the specific ranges, the attribute it needs to sort by, and also its assigned worker number
-				cout << "Starting worker process #" << childNum << " with parent ID " << getppid() << endl;
 				string rangeStartStr = to_string(workerRanges[childNum][0]);
 				string rangeEndStr = to_string(workerRanges[childNum][1]);
 				string attrNumStr = to_string(attrNum);
@@ -367,7 +370,6 @@ int main(int argc, char* args[]) {
 
 		pid_t pid;
 		pid = fork(); // Forking the merger node
-		cout << "Starting merger node with PID: " << pid << endl;
 		if(pid < 0) { // Error handling
 			cerr << "Error: could not start merger child process." << endl;
 			return -1;
@@ -390,8 +392,7 @@ int main(int argc, char* args[]) {
 			fd1 = open("intfifo",O_RDONLY);
 
 			for(int j = 0; j < workerNum; j++) { // Letting each worker have their pass at the pipe
-				sleep(1);
-				cout << "Sending signal to child with PID: " << pidArray[j] << endl;
+				sleep(0.1);
 				kill(pidArray[j], SIGCONT); // We overload the SIGCONT signal to do what we want as SIGUSR1 and 2 are in use for other, required reasons - besides, it makes sense that we'd use SIGCONT to tell the worker that it can proceed 
 
 				for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0]+1; i++) { // For each worker, we *strictly* only read as much as it can write to us; that is, its range
@@ -405,17 +406,18 @@ int main(int argc, char* args[]) {
 					partSortedData[i+workerRanges[j][0]].dep = dep;
 					partSortedData[i+workerRanges[j][0]].income = income;
 					partSortedData[i+workerRanges[j][0]].zip = zip;
-				}
 
-				cout << "End of pipe loop iteration" << endl;
-				//sleep(1); // A bit of delay to ensure no mixing up the order
+					cout << "\rSorted entries read from workers through pipe: " << i+workerRanges[j][0]+1;
+				}
 			}
+			cout << endl;
 			close(fd1);
 
 			// Delete the named pipe - if you don't do this, there might still be data left in it when you next start the program! Definitely caused me a few strange bugs
 			unlink("intfifo");
 
 			// Because the strings/char arrays really did not want to work well with the pipe, no matter how I sliced it, I decided to take a different approach - with the piping done and partSortedData assembled, we can cross-check the unique RIDs with the initialDataSet we parsed earlier to assign the missing string members before we start the merging process 
+
 			for(int i = 0; i < lineCount; i++) {
 				for(int j = 0; j < lineCount; j++) {
 					if(partSortedData[i].rid == initialDataSet[j].rid) { // Simple O(n^2) matching
@@ -423,18 +425,19 @@ int main(int argc, char* args[]) {
 						partSortedData[i].lastName = initialDataSet[j].lastName;
 					}
 				}
+				cout << "Matching a name to each entry through the RID. Entries processed: " << i+1;
+				cout << "\r";
 			}
+			cout << endl;
 
-			//delete[] initialDataSet; // No longer need this array, so we're freeing up the memory
-
-			int j = 0;
-			for(int i = 0; i < lineCount; i++) {
+			// The below code prints the sorted sub-arrays received from each worker; uncomment if you're interested in that sort of thing
+/*			for(int i = 0; i < lineCount; i++) {
 				if(i == workerRanges[j][0]) { // Whenever we reach the starting index of a worker, we know that the entries afterwards (and until the next starting index) were sorted by that worker
 					cout << "Sorted array received from worker #" << j << endl;
 					j++;
 				}
 				cout << partSortedData[i].rid << " " << partSortedData[i].firstName << " " << partSortedData[i].lastName << " " << partSortedData[i].dep << " " << partSortedData[i].income << " " << partSortedData[i].zip << endl;	
-			}
+			}*/
 
 			int workerRangeStarts[workerNum]; // An array with just the starting points of each worker; will be sent to the merger
 			for(int i = 0; i < workerNum; i++) {
@@ -456,14 +459,14 @@ int main(int argc, char* args[]) {
 		}
 
 		int status = 0;
-		//loop to wait for all children
-		while ((pid = wait(&status)) != -1)
+
+		while ((pid = wait(&status)) != -1) // Coord waits for all its children to finish before it finishes
 		{
 
 			//call function to display return status of child with this pid
 			showReturnStatus(pid, status);			
 		}
-		delete[] initialDataSet;
+		delete[] initialDataSet; // Deleting this in the coord space
 
 
 
@@ -472,12 +475,19 @@ int main(int argc, char* args[]) {
 		wait(NULL);
 		cout << "Coord child finished running." << endl;
 
-		delete[] initialDataSet;
+		delete[] initialDataSet; // Deleting this in the root space
+
+		cout << "SIGUSR1 signals caught by root: " << sigusr1Num << endl << "SIGUSR2 signals caught by coord: " << sigusr2Num << endl;
 
 		timeEnd = clock();
-		execTime = (double(timeEnd) - double(timeStart)) / CLOCKS_PER_SEC; // CLOCKS_PER_SEC is a constant defined in ctime
+		execTime = (double)(timeEnd - timeStart) / CLOCKS_PER_SEC; // CLOCKS_PER_SEC is a constant defined in ctime
+
+		end = chrono::system_clock::now(); 
+
+		chrono::duration<double> elapsed_seconds = end - start; 
 
 		cout << "Execution time for myhie: " << execTime << " seconds." << endl; 
+		cout << "According to chrono: " << elapsed_seconds.count() << endl;
 	}
 
 	return 0;

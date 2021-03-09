@@ -6,14 +6,15 @@
 using namespace std;
 
 // SORTING ALGORITHMS
-// All three of these sorting algorithms have several variations with minimal changes to cover every order-attribute combination - for the first two, comments are repeated in each variation; for the third, I decided it was tidier to just comment on the first occurences of each algorithm
+// All three of these sorting algorithms have several variations with minimal changes to cover every order-attribute combination - for the most part, all of them are commented (even though all the comments repeat as the code does) so that you don't get lost in this admittedly massive file.
 
-void insertionSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { // Insertion sort algorithm written from scratch - although it also has O(n^2) time complexity, to my mind it's intuitive and mostly easy to understand 
+void insertionSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder, int workerNum) { // Insertion sort algorithm written from scratch - although it also has O(n^2) time complexity, to my mind it's intuitive and mostly easy to understand 
 	int insertPos;
 	Taxpayer currentEntry;
 
 	if(attrNum == 0) { // Sorting by RID
 		if(sortOrder == "ascending") {
+			int insertCount = 0;
 
 			for(int i = 1; i < n; i++) {
 
@@ -25,14 +26,12 @@ void insertionSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { /
 					insertPos--; // Keep going backwards until we find the spot
 
 				}
-
+				
 				if(insertPos != i) { // If we're not already there, then finally insert the entry to its proper place in the array
 					dataSet[insertPos] = currentEntry; // This moves the whole struct, without having to move members separately, quite efficient
+					insertCount++;
 				}
-				
 			}
-
-			cout << "insertion sort finished" << endl;
 		}
 		else { // Sort in descending order - essentially the same algorithm, just with a flipped relation check
 
@@ -168,7 +167,7 @@ void insertionSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { /
 	}
 }
 
-void bubbleSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { // Bubble sort from scratch - another O(n^2) sorting algorithm that employs constant pair comparisons to sort
+void bubbleSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder, int workerNum) { // Bubble sort from scratch - another O(n^2) sorting algorithm that employs constant pair comparisons to sort
 	Taxpayer tempEntry;
 	bool swapped = false;
 
@@ -315,7 +314,6 @@ void bubbleSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder) { // B
 }
 
 void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, int lineCount, int attrNum, string sortOrder, string outputFile) {
-	cout << "In merger!" << endl;
 
 	Taxpayer* finalSortedData = new Taxpayer[lineCount];
 	int workerIterators[workerNum] = {0}; // Iterators used by the merging algorithm
@@ -353,6 +351,10 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 				currentMin = 9999999;
 				currentMinWorker = 0;
 
+				cout << "Merging in progress. Entries processed: " << i+1;
+				cout << "\r";
+
+
 			}
 		}
 		else { // When we're sorting by descending order, we flip min to max and also the relation sign, otherwise the algorithm is the same
@@ -384,6 +386,8 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 				currentMax = 0;
 				currentMaxWorker = 0;
 
+				cout << "Merging in progress. Entries processed: " << i+1;
+				cout << "\r";
 			}
 		}
 	}
@@ -416,6 +420,8 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 				currentMin = 9999999;
 				currentMinWorker = 0;
 
+				cout << "Merging in progress. Entries processed: " << i+1;
+				cout << "\r";
 			}
 		}
 		else {
@@ -446,6 +452,8 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 				currentMax = -1;
 				currentMaxWorker = 0;
 
+				cout << "Merging in progress. Entries processed: " << i+1;
+				cout << "\r";
 			}
 		}
 	}
@@ -478,6 +486,8 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 				currentMin = 9999999;
 				currentMinWorker = 0;
 
+				cout << "Merging in progress. Entries processed: " << i+1;
+				cout << "\r";
 			}
 		}
 		else { // When we're sorting by descending order, we flip min to max and also the relation sign, otherwise the algorithm is the same
@@ -508,6 +518,8 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 				currentMax = 0;
 				currentMaxWorker = 0;
 
+				cout << "Merging in progress. Entries processed: " << i+1;
+				cout << "\r";
 			}
 		}
 	}
@@ -540,6 +552,8 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 				currentMin = 9999999;
 				currentMinWorker = 0;
 
+				cout << "Merging in progress. Entries processed: " << i+1;
+				cout << "\r";
 			}
 		}
 		else { // When we're sorting by descending order, we flip min to max and also the relation sign, otherwise the algorithm is the same
@@ -570,21 +584,24 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 				currentMax = 0;
 				currentMaxWorker = 0;
 
+				cout << "Merging in progress. Entries processed: " << i+1;
+				cout << "\r";
 			}
 		}
 	}
 
-	delete[] partSortedData;
+	delete[] partSortedData; // Now that we have the final sorted dataset, we no longer need this - since it was declared and only used in the merger node, it's enough to delete it once, here
 
-	cout << "FINAL SORTED DATA" << endl;
+	cout << "\n\nFINAL SORTED DATA" << endl;
 	for(int i = 0; i < lineCount; i++) {
-		cout << finalSortedData[i].rid << " " << finalSortedData[i].firstName << " " << finalSortedData[i].lastName << " " << finalSortedData[i].dep << " " << finalSortedData[i].income << " " << finalSortedData[i].zip << endl;		
+		//cout << finalSortedData[i].rid << " " << finalSortedData[i].firstName << " " << finalSortedData[i].lastName << " " << finalSortedData[i].dep << " " << finalSortedData[i].income << " " << finalSortedData[i].zip << endl;		
 	}
 
 	ofstream fout;
 	fout.open(outputFile);
 
 	if(fout.is_open()) {
+		cout << "Writing sorted data to specified output file..." << endl;
 		for(int i = 0; i < lineCount; i++) {
 			string line = to_string(finalSortedData[i].rid) + " " + finalSortedData[i].firstName + " " + finalSortedData[i].lastName + " " + to_string(finalSortedData[i].dep) + " " + to_string(finalSortedData[i].income) + " " + to_string(finalSortedData[i].zip) + "\n"; // Construct entry line
 

@@ -12,8 +12,8 @@ struct Taxpayer { // Struct that stores all our data - we don't need a class as 
 	int zip;		
 };
 
-void insertionSort(Taxpayer dataSet[], int n, int attrNum, std::string sortOrder);
-void bubbleSort(Taxpayer dataSet[], int n, int attrNum, std::string sortOrder);
+void insertionSort(Taxpayer dataSet[], int n, int attrNum, std::string sortOrder, int workerNum);
+void bubbleSort(Taxpayer dataSet[], int n, int attrNum, std::string sortOrder, int workerNum);
 void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, int lineCount, int attrNum, std::string sortOrder, std::string outputFile);
 
 #endif
