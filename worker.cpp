@@ -1,11 +1,9 @@
-#include <iostream>
+#include <iostream> // Libraries included for the same functions as detailed in myhie.cpp
 #include <fstream>
-#include <cstdio> 
 #include <string>
 #include <cstring>
 #include <fcntl.h> 
 #include <sys/stat.h> 
-#include <sys/types.h> 
 #include <sys/wait.h>
 #include <unistd.h>
 #include <chrono>
@@ -140,6 +138,7 @@ int main(int argc, char* args[]) {
 	int fd1;
 	fd1 = open("intfifo", O_WRONLY);
 
+	cout << "Worker #" << workerNum << " waiting for permission." << endl;
 	while(readyToWrite == false) { // Worker waits until it receives the signal from coord that it can write into the pipe
 		sleep(1);
 	}

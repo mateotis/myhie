@@ -31,6 +31,8 @@ void insertionSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder, int
 					dataSet[insertPos] = currentEntry; // This moves the whole struct, without having to move members separately, quite efficient
 					insertCount++;
 				}
+
+				//cout << "Worker #" << workerNum << " insertion sort sorted this many entries: " << i+1 << endl;
 			}
 		}
 		else { // Sort in descending order - essentially the same algorithm, just with a flipped relation check
@@ -174,6 +176,7 @@ void bubbleSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder, int wo
 	if(attrNum == 0) { // Sorting by RID
 
 		if(sortOrder == "ascending") {
+			int count = 0;
 
 			do { // Probably the first time I've ever written a do-while loop in an actual program - but it's necessary here, as bubble sort always requires one full loop to tell if the array is sorted
 				swapped = false; // If we go through an entire for loop without this changing to true, that means the array is sorted and we're done
@@ -185,6 +188,8 @@ void bubbleSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder, int wo
 
 						swapped = true; // We've done at least one swap, so the array is not yet sorted - repeat the while loop
 					}
+				//cout << "Worker #" << workerNum << " bubble sort ran this many times: " << count << endl;
+				//count++;
 				}
 			}
 			while(swapped == true);
@@ -315,12 +320,18 @@ void bubbleSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder, int wo
 
 void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, int lineCount, int attrNum, string sortOrder, string outputFile) {
 
+	cout << "Merging initiated." << endl;
+
 	Taxpayer* finalSortedData = new Taxpayer[lineCount];
 	int workerIterators[workerNum] = {0}; // Iterators used by the merging algorithm
 
 	// The merger checks the first elements of every sub-array, looking for the smallest/largest value, then it advances the iterator of that sub-array before moving onto the next value, steadily filling up the final sorted array as such
 
 	// As with the other sorting algos in this file, we need to have a version for every potential order-attribute combination
+
+/*	for(int i = 0; i < lineCount; i++) {
+		cout << i << " " << partSortedData[i].rid << endl;
+	}*/
 
 	if(attrNum == 0) { // Sorting by RID
 		if(sortOrder == "ascending") {
@@ -337,7 +348,9 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 					else if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
 						continue;
 					}
-			
+					
+					//cout << "Comparing " << partSortedData[workerRangeStarts[j] + workerIterators[j]].rid << " at index " << workerRangeStarts[j] + workerIterators[j] << " in worker #" << j << " with " << currentMin << endl;
+
 					if(partSortedData[workerRangeStarts[j] + workerIterators[j]].rid < currentMin) { // If you remember, we did the same indexing when we first assembled partSortedData - adding the starting point of the worker to the current position of the iterator - except back there the iterator was just i, here it's a whole array of them!
 						currentTaxpayer = partSortedData[workerRangeStarts[j] + workerIterators[j]];
 						currentMin = partSortedData[workerRangeStarts[j] + workerIterators[j]].rid;
@@ -347,6 +360,7 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 
 				finalSortedData[i] = currentTaxpayer;
 				workerIterators[currentMinWorker]++; // Advance the iterator of the sub-array where we found the right element, to ensure that we don't consider it again
+				//cout << "Iterator for worker #" << currentMinWorker << " at: " << workerIterators[currentMinWorker] << endl;
 
 				currentMin = 9999999;
 				currentMinWorker = 0;
@@ -610,12 +624,12 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 			}
 
 			fout.close();
-			delete[] finalSortedData;
 		}
 		else {
 			cerr << "Could not open output file!" << endl;
-			return;
 			delete[] finalSortedData;
+			return;
 		}
 	}
+	delete[] finalSortedData; // To make sure we leave no leaks
 }

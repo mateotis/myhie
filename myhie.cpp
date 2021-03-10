@@ -1,15 +1,15 @@
-#include <iostream>
-#include <fstream>
-#include <cstring> // For strcmp and strcpy
-#include <cstdio>
-#include <cstdlib>
-#include <ctime> // For time-keeping (and random number generator seeding, believe it or not)
-#include <unistd.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <sys/stat.h> 
-#include <sys/types.h> 
-#include <chrono>
+#include <iostream> // For cout
+#include <fstream> // For file I/O
+#include <cstring> // For strcmp() and strcpy() when we're using exec and read/write
+//#include <cstdio> // For read/write
+#include <cstdlib> // For rand() and srand(), generating our random ranges
+#include <ctime> // For seeding srand() with time()
+#include <unistd.h> // For read/write and IPC
+#include <sys/wait.h> // For wait() and signals
+#include <fcntl.h> // For pipe flags
+#include <sys/stat.h> // For mkfifo(), creating named pipes
+//#include <sys/types.h>
+#include <chrono> // For time-keeping
 
 #include "sorters.h"
 
@@ -53,8 +53,6 @@ int main(int argc, char* args[]) {
 	int attrNum = 0;
 	bool randomRanges = false;
 	bool ascendingOrder = true; // If false, then we'll sort in a descending order, obviously
-
-	//chrono::time_point<chrono::system_clock> start, end; 
 
 	auto rootTimeStart = chrono::system_clock::now(); // Using the auto type to avoid having to type long, library specific types
 
@@ -136,6 +134,11 @@ int main(int argc, char* args[]) {
 		lineCount++;
 	}
 	fin.close();
+
+	if(workerNum > lineCount) { // I mean, I don't think anyone would specify more workers than there are entries, but if they did, then the program would crash, so let's account for it just in case
+		cerr << "The number of workers given is higher than the size of the dataset!" << endl;
+		return -1;
+	}
 
 	Taxpayer* initialDataSet = new Taxpayer[lineCount]; // Array of Taxpayer structs, stored for now; will be used to cross-check and add the strings to the structs during the merge process. Needs to be dynamically allocated as processing large inputs would take up too much space on the stack!
 
@@ -376,6 +379,8 @@ int main(int argc, char* args[]) {
 
 			auto mergerTimeStart = chrono::system_clock::now();
 
+			unlink("intfifo");
+
 			if(mkfifo("intfifo" , 0777) == -1) { // Create pipe for our numerical variables
 				if(errno != EEXIST) {
 					cerr << "Error: couldn't create intfifo pipe" << endl;
@@ -391,7 +396,10 @@ int main(int argc, char* args[]) {
 			int rid, dep, zip;
 			float income;
 			double execTime;
+
 			fd1 = open("intfifo",O_RDONLY);
+
+			cout << "Waiting for workers to finish sorting..." << endl;
 
 			for(int j = 0; j < workerNum; j++) { // Letting each worker have their pass at the pipe
 				sleep(0.1);
@@ -417,6 +425,10 @@ int main(int argc, char* args[]) {
 			cout << endl;
 			close(fd1);
 
+			for(int i = 0; i < lineCount; i++) {
+				//cout << i << " " << partSortedData[i].rid << endl;
+			}			
+
 			// Delete the named pipe - if you don't do this, there might still be data left in it when you next start the program! Definitely caused me a few strange bugs
 			unlink("intfifo");
 
@@ -435,13 +447,16 @@ int main(int argc, char* args[]) {
 			cout << endl;
 
 			// The below code prints the sorted sub-arrays received from each worker; uncomment if you're interested in that sort of thing
+			cout << "test 1" << endl;
 /*			for(int i = 0; i < lineCount; i++) {
+				cout << "test 3";
 				if(i == workerRanges[j][0]) { // Whenever we reach the starting index of a worker, we know that the entries afterwards (and until the next starting index) were sorted by that worker
 					cout << "Sorted array received from worker #" << j << endl;
 					j++;
 				}
 				cout << partSortedData[i].rid << " " << partSortedData[i].firstName << " " << partSortedData[i].lastName << " " << partSortedData[i].dep << " " << partSortedData[i].income << " " << partSortedData[i].zip << endl;	
 			}*/
+			cout << "test 2" << endl;
 
 			cout << "All workers finished sorting." << endl;
 
@@ -459,6 +474,8 @@ int main(int argc, char* args[]) {
 			}
 			merge(partSortedData, workerRangeStarts, workerNum, lineCount, attrNum, sortOrder, outputFile);
 
+			delete[] initialDataSet; // Deleting this in the merger space
+
 			// Displaying execution times for workers and the merger itself
 			for(int i = 0; i < workerNum; i++) {
 				cout << "Execution time for worker #" << i << ": " << workerExecTimes[i] << endl;
@@ -468,6 +485,8 @@ int main(int argc, char* args[]) {
 			cout << "Execution time for merger node: " << mergerExecTime.count() << endl;
 
 			kill(rootPID, SIGUSR2); // After the merging is done, we're done properly - send signal to root accordingly
+
+			return 0;
 		}
 
 		int status = 0;
