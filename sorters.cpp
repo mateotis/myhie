@@ -594,27 +594,28 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 
 	cout << "\n\nFINAL SORTED DATA" << endl;
 	for(int i = 0; i < lineCount; i++) {
-		//cout << finalSortedData[i].rid << " " << finalSortedData[i].firstName << " " << finalSortedData[i].lastName << " " << finalSortedData[i].dep << " " << finalSortedData[i].income << " " << finalSortedData[i].zip << endl;		
+		cout << finalSortedData[i].rid << " " << finalSortedData[i].firstName << " " << finalSortedData[i].lastName << " " << finalSortedData[i].dep << " " << finalSortedData[i].income << " " << finalSortedData[i].zip << endl;		
 	}
 
-	ofstream fout;
-	fout.open(outputFile);
+	if(outputFile != "") { // If the user specified an output file, write the results to that too
+		ofstream fout;
+		fout.open(outputFile);
 
-	if(fout.is_open()) {
-		cout << "Writing sorted data to specified output file..." << endl;
-		for(int i = 0; i < lineCount; i++) {
-			string line = to_string(finalSortedData[i].rid) + " " + finalSortedData[i].firstName + " " + finalSortedData[i].lastName + " " + to_string(finalSortedData[i].dep) + " " + to_string(finalSortedData[i].income) + " " + to_string(finalSortedData[i].zip) + "\n"; // Construct entry line
+		if(fout.is_open()) {
+			cout << "Writing sorted data to specified output file..." << endl;
+			for(int i = 0; i < lineCount; i++) {
+				string line = to_string(finalSortedData[i].rid) + " " + finalSortedData[i].firstName + " " + finalSortedData[i].lastName + " " + to_string(finalSortedData[i].dep) + " " + to_string(finalSortedData[i].income) + " " + to_string(finalSortedData[i].zip) + "\n"; // Construct entry line
 
-			fout << line;
+				fout << line;
+			}
+
+			fout.close();
+			delete[] finalSortedData;
 		}
-
-		fout.close();
-		delete[] finalSortedData;
+		else {
+			cerr << "Could not open output file!" << endl;
+			return;
+			delete[] finalSortedData;
+		}
 	}
-	else {
-		cerr << "Could not open output file!" << endl;
-		return;
-		delete[] finalSortedData;
-	}
-
 }

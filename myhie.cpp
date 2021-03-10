@@ -37,7 +37,7 @@ void signalHandler(int signal)
 		sigusr1Num++;
 	}
 	else if(signal==SIGUSR2) {
-		cout << "Coord received SIGUSR2 signal: execution is finished! Exiting..." << endl;
+		cout << "Root received SIGUSR2 signal: execution is finished! Exiting..." << endl;
 		sigusr2Num++;
 	}
 }
@@ -47,20 +47,16 @@ int main(int argc, char* args[]) {
 	string inputFile = "";
 	string workerNumStr = "";
 	string attrNumStr = "";
-	string outputFile = "output.csv";
-	int workerNum = 5; // We set up some default values so that the program could technically run with only the input file as parameter
+	// We set up some default values so that the program could technically run with only the input file as parameter
+	string outputFile = "";
+	int workerNum = 5;
 	int attrNum = 0;
 	bool randomRanges = false;
 	bool ascendingOrder = true; // If false, then we'll sort in a descending order, obviously
 
-	clock_t timeStart, timeEnd; // We'll measure the execution time of the entire program
-	double execTime;
+	//chrono::time_point<chrono::system_clock> start, end; 
 
-	timeStart = clock();
-
-	chrono::time_point<chrono::system_clock> start, end; 
-
-	start = chrono::system_clock::now(); 
+	auto rootTimeStart = chrono::system_clock::now(); // Using the auto type to avoid having to type long, library specific types
 
 	for(int i = 0; i < argc; i++) {
 		if(strcmp(args[i], "-i") == 0) { // Parameter parsing code adapted from my mvote program, except we have many more params here
@@ -207,7 +203,8 @@ int main(int argc, char* args[]) {
 	fin.close();
 	cout << "File has " << lineCount << " lines." << endl;
 
-	signal(SIGUSR1, signalHandler);
+	signal(SIGUSR1, signalHandler); // Setting up the signal handler to catch the program signals
+	signal(SIGUSR2, signalHandler);
 
 	// Creating the coordinator node and sending it info
 	int fd[2];
@@ -218,6 +215,8 @@ int main(int argc, char* args[]) {
 		return -1;
 	} 
 	else if(pid == 0) { // PID == 0 means we're always in the child, here known as the coordinator node
+
+		auto coordTimeStart = chrono::system_clock::now();
 
 		// ASSIGNING AND GENERATING WORKER RANGES
 		int workerRanges[workerNum][2]; // 2D array with each entry corresponding to a worker with two ints in it: range start and range end
@@ -313,7 +312,6 @@ int main(int argc, char* args[]) {
 		// Creating worker children
 
 		pid_t pidArray[workerNum]; // Array to save the child PIDs in, will be useful for signal sending/catching
-		signal(SIGUSR2, signalHandler); // Will receive this from the merger node once we're all done
 
 		pid_t rootPID = getppid(); // Saving the PID of root (the parent of coord) to pass to the workers so the workers can later send signals straight to root
 
@@ -376,6 +374,8 @@ int main(int argc, char* args[]) {
 		} 
 		else if(pid == 0) { // In merger node
 
+			auto mergerTimeStart = chrono::system_clock::now();
+
 			if(mkfifo("intfifo" , 0777) == -1) { // Create pipe for our numerical variables
 				if(errno != EEXIST) {
 					cerr << "Error: couldn't create intfifo pipe" << endl;
@@ -385,10 +385,12 @@ int main(int argc, char* args[]) {
 
 			// This was originally a 2D array, which was a simple and intuitive solution - BUT, C++ doesn't allow you to pass arrays with variable sizes to functions, which caused trouble later on in the merging process. So instead I rewrote it to be a regular array and use some clever indexing to fit everything in there in a partially sorted manner.
 			Taxpayer* partSortedData = new Taxpayer[lineCount];
+			double workerExecTimes[workerNum]; // Array to store worker execution times we get from the pipe
 			int fd1;
 
 			int rid, dep, zip;
 			float income;
+			double execTime;
 			fd1 = open("intfifo",O_RDONLY);
 
 			for(int j = 0; j < workerNum; j++) { // Letting each worker have their pass at the pipe
@@ -409,6 +411,8 @@ int main(int argc, char* args[]) {
 
 					cout << "\rSorted entries read from workers through pipe: " << i+workerRanges[j][0]+1;
 				}
+				read(fd1, &execTime, sizeof(execTime)); // Get the worker's execution time as its last read and store it
+				workerExecTimes[j] = execTime;
 			}
 			cout << endl;
 			close(fd1);
@@ -420,7 +424,7 @@ int main(int argc, char* args[]) {
 
 			for(int i = 0; i < lineCount; i++) {
 				for(int j = 0; j < lineCount; j++) {
-					if(partSortedData[i].rid == initialDataSet[j].rid) { // Simple O(n^2) matching
+					if(partSortedData[i].rid == initialDataSet[j].rid) { // Simple O(n^2) matching - it makes for a  bottleneck in program execution time, but it ensures stable and accurate data output
 						partSortedData[i].firstName = initialDataSet[j].firstName;
 						partSortedData[i].lastName = initialDataSet[j].lastName;
 					}
@@ -439,6 +443,8 @@ int main(int argc, char* args[]) {
 				cout << partSortedData[i].rid << " " << partSortedData[i].firstName << " " << partSortedData[i].lastName << " " << partSortedData[i].dep << " " << partSortedData[i].income << " " << partSortedData[i].zip << endl;	
 			}*/
 
+			cout << "All workers finished sorting." << endl;
+
 			int workerRangeStarts[workerNum]; // An array with just the starting points of each worker; will be sent to the merger
 			for(int i = 0; i < workerNum; i++) {
 				workerRangeStarts[i] = workerRanges[i][0];
@@ -453,9 +459,15 @@ int main(int argc, char* args[]) {
 			}
 			merge(partSortedData, workerRangeStarts, workerNum, lineCount, attrNum, sortOrder, outputFile);
 
-			kill(getppid(), SIGUSR2); // After the merging is done, we're done properly - send signal to coord accordingly
+			// Displaying execution times for workers and the merger itself
+			for(int i = 0; i < workerNum; i++) {
+				cout << "Execution time for worker #" << i << ": " << workerExecTimes[i] << endl;
+			}
+			auto mergerTimeEnd = chrono::system_clock::now();
+			chrono::duration<double> mergerExecTime = mergerTimeEnd - mergerTimeStart;
+			cout << "Execution time for merger node: " << mergerExecTime.count() << endl;
 
-
+			kill(rootPID, SIGUSR2); // After the merging is done, we're done properly - send signal to root accordingly
 		}
 
 		int status = 0;
@@ -468,26 +480,21 @@ int main(int argc, char* args[]) {
 		}
 		delete[] initialDataSet; // Deleting this in the coord space
 
-
-
+		auto coordTimeEnd = chrono::system_clock::now();
+		chrono::duration<double> coordExecTime = coordTimeEnd - coordTimeStart;
+		cout << "Execution time for coordinator node: " << coordExecTime.count() << endl;
 	} 
 	else { // Parents waits for coord to finish
 		wait(NULL);
-		cout << "Coord child finished running." << endl;
 
 		delete[] initialDataSet; // Deleting this in the root space
 
-		cout << "SIGUSR1 signals caught by root: " << sigusr1Num << endl << "SIGUSR2 signals caught by coord: " << sigusr2Num << endl;
+		cout << "SIGUSR1 signals caught by root: " << sigusr1Num << endl << "SIGUSR2 signals caught by root: " << sigusr2Num << endl;
 
-		timeEnd = clock();
-		execTime = (double)(timeEnd - timeStart) / CLOCKS_PER_SEC; // CLOCKS_PER_SEC is a constant defined in ctime
+		auto rootTimeEnd = chrono::system_clock::now(); 
+		chrono::duration<double> rootExecTime = rootTimeEnd - rootTimeStart; 
 
-		end = chrono::system_clock::now(); 
-
-		chrono::duration<double> elapsed_seconds = end - start; 
-
-		cout << "Execution time for myhie: " << execTime << " seconds." << endl; 
-		cout << "According to chrono: " << elapsed_seconds.count() << endl;
+		cout << "Execution time for myhie: " << rootExecTime.count() << " seconds." << endl; 
 	}
 
 	return 0;

@@ -8,7 +8,7 @@
 #include <sys/types.h> 
 #include <sys/wait.h>
 #include <unistd.h>
-#include <ctime>
+#include <chrono>
 
 #include "sorters.h"
 
@@ -28,10 +28,8 @@ int main(int argc, char* args[]) {
 	signal(SIGCONT, signalHandler);
 
 	string inputFile, rangeStartStr, rangeEndStr, attrNumStr, workerNumStr, sortOrder, rootPIDStr;
-	clock_t timeStart, timeEnd; // We'll measure the execution time of each worker
-	double execTime;
-
-	timeStart = clock();
+	
+	auto workerTimeStart = chrono::system_clock::now();
 
 	// We know the exact order of arguments, so we don't have to look for them in a for loop
 	inputFile = args[1];
@@ -153,14 +151,16 @@ int main(int argc, char* args[]) {
 		write(fd1, &dataSet[i].income, sizeof(dataSet[i].income));
 		write(fd1, &dataSet[i].zip, sizeof(dataSet[i].zip));
 	}
+
+	auto workerTimeEnd = chrono::system_clock::now();
+	chrono::duration<double> workerExecTimeChrono = workerTimeEnd - workerTimeStart;
+	double workerExecTime = workerExecTimeChrono.count(); // Using an extra variable to simplify writing it to the pipe
+
+	write(fd1, &workerExecTime, sizeof(workerExecTime));
+
 	close(fd1);
 
 	kill(rootPID, SIGUSR1); // Sending SIGUSR1 to root to notify it that this worker has finished
-
-	timeEnd = clock();
-	execTime = (double(timeEnd) - double(timeStart)) / CLOCKS_PER_SEC; // CLOCKS_PER_SEC is a constant defined in ctime
-
-	//cout << "Execution time for worker #" << workerNum << ": " << execTime << " seconds." << endl; 
 
 	return 0;
 
