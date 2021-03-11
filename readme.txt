@@ -81,10 +81,10 @@ I also recommend scaling the amount of workers provided to the data size if you 
 
 That said, there is one bottleneck that I want to mention: the string matcher. It goes through the entire data set in O(n^2) time, making it by far the slowest part of myhie. This is really only noticeable on the two largest datasets. But regardless, to make testing easier, I included an extra parameter: if you add "-ws" when running myhie, the program will skip the string matcher entirely. Your output will, of course, lack the names of the entries because of this, but it will otherwise be perfectly sorted and formatted as usual. Use it as you wish!
 
-Finally, I wanted to mention that there was a single issue that eluded my grasp all throughout. In *very rare* cases when there are only two workers given, the program gives strange, repeated output and doesn't exit properly. I tried for hours, but I wasn't able to consistently reproduce this bug, and you may never encounter it either. But I'm warning you, just in case.
-If you do encounter it, just terminate the program and re-run it with simple parameters (a small dataset with one worker will do the job) to make sure the pipe and memory are cleared out properly. After you've done so, you can carry on as normal!
+As with mvote, I led a Github repository for myhie which I updated frequently. The link for it is: https://github.com/mateotis/myhie
+At the time of submission, it is private, but I will make it public once the assignment deadline has passed. Feel free to check it out! 
 
-Thank you, once again, for reading my readme to the end. I hope I could take you on an enjoyable journey, because that's what's making this assignment was for me.
+Thank you, once again, for reading my readme to the end. I hope I could give you a glimpse to how much of a challenging yet enlightening experience this was for me.
 
 Enjoy myhie!
 --Máté

@@ -407,6 +407,7 @@ int main(int argc, char* args[]) {
 
 				for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0]+1; i++) { // For each worker, we *strictly* only read as much as it can write to us; that is, its range
 					read(fd1, &rid, sizeof(rid));
+					//cout << i << " RID read: " << rid << endl;
 					read(fd1, &dep, sizeof(dep));
 					read(fd1, &income, sizeof(income));
 					read(fd1, &zip, sizeof(zip));
@@ -422,6 +423,7 @@ int main(int argc, char* args[]) {
 				read(fd1, &execTime, sizeof(execTime)); // Get the worker's execution time as its last read and store it
 				workerExecTimes[j] = execTime;
 				close(fd1); // We close the pipe after we're done with a worker and reopen it again at the start of the loop to maintain separation and sync
+				sleep(0.1); // This (hopefully) fixes a bug where the next iteration of this loop started before the worker closed its end of the pipe, leading to repeated reads - by making merger wait a little, we give time for the worker to properly close its end of the pipe
 			}
 			cout << endl;
 			close(fd1);	

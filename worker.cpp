@@ -144,6 +144,7 @@ int main(int argc, char* args[]) {
 
 	for(int i = 0; i < n; i++) { // Only write as much as there are entries
 
+		//cout << i << " Writing RID: " << dataSet[i].rid << endl;
 		write(fd1, &dataSet[i].rid, sizeof(dataSet[i].rid));
 		write(fd1, &dataSet[i].dep, sizeof(dataSet[i].dep));
 		write(fd1, &dataSet[i].income, sizeof(dataSet[i].income));
