@@ -16,7 +16,7 @@ bool readyToWrite = false; // Define this as a global variable as we change it f
 
 void signalHandler(int signal)
 {
-	if (signal==SIGCONT) { // Getting SIGCONT from coord means the worker is given the go-ahead to write to the pipe
+	if (signal==SIGCONT) { // Getting SIGCONT from merger means the worker is given the go-ahead to write to the pipe
 		readyToWrite = true;
 	}
 }
@@ -48,7 +48,7 @@ int main(int argc, char* args[]) {
 	ifstream fin;
 	fin.open(inputFile);
 
-	Taxpayer* dataSet = new Taxpayer[rangeEnd - rangeStart + 1]; // Array of Taxpayer structs, this is what we'll slice up and pass to all our sorters
+	Taxpayer* dataSet = new Taxpayer[rangeEnd - rangeStart + 1]; // Array of Taxpayer structs, specifically the size of the worker range
 
 	string line;
 	int readVar = 0; // Which variable we're currently trying to assemble
@@ -136,10 +136,9 @@ int main(int argc, char* args[]) {
 	}
 
 	int fd1;
-	fd1 = open("intfifo", O_WRONLY);
+	fd1 = open("intfifo", O_WRONLY); // Open pipe to signal merger that it can start reading
 
-	cout << "Worker #" << workerNum << " waiting for permission." << endl;
-	while(readyToWrite == false) { // Worker waits until it receives the signal from coord that it can write into the pipe
+	while(readyToWrite == false) { // Worker waits until it receives the signal from the merger that it can write into the pipe
 		sleep(1);
 	}
 

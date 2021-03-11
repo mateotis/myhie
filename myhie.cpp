@@ -18,18 +18,6 @@ using namespace std;
 int sigusr1Num = 0; // Declaring the number of signals caught as global variables so we can increment them in the signal handler
 int sigusr2Num = 0;
 
-static void showReturnStatus(pid_t childpid, int status) // Diagnostic function taken from an OS lab
-{
-/*	if (WIFEXITED(status) && !WEXITSTATUS(status))
-		printf("Child %ld terminated normally\n", (long)childpid);
-	else if (WIFEXITED(status))
-		printf("Child %ld terminated with return status %d\n", (long)childpid, WEXITSTATUS(status));
-	else if (WIFSIGNALED(status))
-		printf("Child %ld terminated due to uncaught signal %d\n", (long)childpid, WTERMSIG(status));
-	else if (WIFSTOPPED(status))
-		printf("Child %ld stopped due to signal %d\n", (long)childpid, WSTOPSIG(status));*/
-}
-
 void signalHandler(int signal)
 {
 	if(signal==SIGUSR1) {
@@ -137,6 +125,10 @@ int main(int argc, char* args[]) {
 
 	if(workerNum > lineCount) { // I mean, I don't think anyone would specify more workers than there are entries, but if they did, then the program would crash, so let's account for it just in case
 		cerr << "The number of workers given is higher than the size of the dataset!" << endl;
+		return -1;
+	}
+	else if(workerNum < 1) {
+		cerr << "Please specify at least one worker." << endl;
 		return -1;
 	}
 
@@ -277,7 +269,6 @@ int main(int argc, char* args[]) {
 				currentMin = lineCount;
 			}
 
-			srand(time(0));
 			for(int i = 0; i < workerNum; i++) { // Now that we have the starting points, we get the end points to ensure we cover all ground
 				if(i < workerNum - 1) { // Boundary check
 					if(workerRanges[i+1][0] - workerRanges[i][0] == 0) { // This should never occur as we ensure there are no repetitions earlier - but hey, crazier things have happened, and it's better to be safe than sorry
@@ -344,7 +335,7 @@ int main(int argc, char* args[]) {
 				}
 
 				// Sadly, we're not free of char arrays in this program either - the exec() command can't handle strings as parameters, so we have to go the old-fashioned way
-				char* inputFileChar = new char[30];
+				char* inputFileChar = new char[30]; // We don't actually need to delete these as execv() will just overwrite this whole block of memory with the worker code, essentially deleting it for us
 				char* rangeStartChar = new char[30];
 				char* rangeEndChar = new char[30];
 				char* attrNumChar = new char[30];
@@ -364,7 +355,7 @@ int main(int argc, char* args[]) {
 				strcpy(workerNameChar, workerName.c_str()); // Put the "worker" string into a char array to stop the compiler from complaining that we're using a string in an array of char pointers
 
 				char* arg[] = {workerNameChar,inputFileChar,rangeStartChar, rangeEndChar, attrNumChar, childNumChar, sortOrderChar, rootPIDChar, NULL}; 
-				execv("./worker", arg);	
+				execv("./worker", arg);	// Pass it all to the worker executable and start working!
 			}
 		
 		}
@@ -379,7 +370,7 @@ int main(int argc, char* args[]) {
 
 			auto mergerTimeStart = chrono::system_clock::now();
 
-			unlink("intfifo");
+			unlink("intfifo"); // A fail-safe in case the previous execution of this program was ended before it could delete the pipe
 
 			if(mkfifo("intfifo" , 0777) == -1) { // Create pipe for our numerical variables
 				if(errno != EEXIST) {
@@ -397,12 +388,11 @@ int main(int argc, char* args[]) {
 			float income;
 			double execTime;
 
-			fd1 = open("intfifo",O_RDONLY);
-
 			cout << "Waiting for workers to finish sorting..." << endl;
 
 			for(int j = 0; j < workerNum; j++) { // Letting each worker have their pass at the pipe
-				sleep(0.1);
+
+				fd1 = open("intfifo",O_RDONLY); // This will block until at least one of the workers is ready to write, but that's okay and it actually helps us maintain sync
 				kill(pidArray[j], SIGCONT); // We overload the SIGCONT signal to do what we want as SIGUSR1 and 2 are in use for other, required reasons - besides, it makes sense that we'd use SIGCONT to tell the worker that it can proceed 
 
 				for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0]+1; i++) { // For each worker, we *strictly* only read as much as it can write to us; that is, its range
@@ -421,13 +411,10 @@ int main(int argc, char* args[]) {
 				}
 				read(fd1, &execTime, sizeof(execTime)); // Get the worker's execution time as its last read and store it
 				workerExecTimes[j] = execTime;
+				close(fd1); // We close the pipe after we're done with a worker and reopen it again at the start of the loop to maintain separation and sync
 			}
 			cout << endl;
-			close(fd1);
-
-			for(int i = 0; i < lineCount; i++) {
-				//cout << i << " " << partSortedData[i].rid << endl;
-			}			
+			close(fd1);	
 
 			// Delete the named pipe - if you don't do this, there might still be data left in it when you next start the program! Definitely caused me a few strange bugs
 			unlink("intfifo");
@@ -446,18 +433,6 @@ int main(int argc, char* args[]) {
 			}
 			cout << endl;
 
-			// The below code prints the sorted sub-arrays received from each worker; uncomment if you're interested in that sort of thing
-			cout << "test 1" << endl;
-/*			for(int i = 0; i < lineCount; i++) {
-				cout << "test 3";
-				if(i == workerRanges[j][0]) { // Whenever we reach the starting index of a worker, we know that the entries afterwards (and until the next starting index) were sorted by that worker
-					cout << "Sorted array received from worker #" << j << endl;
-					j++;
-				}
-				cout << partSortedData[i].rid << " " << partSortedData[i].firstName << " " << partSortedData[i].lastName << " " << partSortedData[i].dep << " " << partSortedData[i].income << " " << partSortedData[i].zip << endl;	
-			}*/
-			cout << "test 2" << endl;
-
 			cout << "All workers finished sorting." << endl;
 
 			int workerRangeStarts[workerNum]; // An array with just the starting points of each worker; will be sent to the merger
@@ -466,13 +441,13 @@ int main(int argc, char* args[]) {
 			}
 
 			string sortOrder = "";
-			if(ascendingOrder == true) {
+			if(ascendingOrder == true) { // I could technically just pass the boolean, but these strings make for more understandable code
 				sortOrder = "ascending";
 			}
 			else {
 				sortOrder = "descending";
 			}
-			merge(partSortedData, workerRangeStarts, workerNum, lineCount, attrNum, sortOrder, outputFile);
+			merge(partSortedData, workerRangeStarts, workerNum, lineCount, attrNum, sortOrder, outputFile); // The final part of the program: the merge function which assembles the final sorted list and prints it/saves it to the specified file
 
 			delete[] initialDataSet; // Deleting this in the merger space
 
@@ -490,13 +465,8 @@ int main(int argc, char* args[]) {
 		}
 
 		int status = 0;
+		while ((pid = wait(&status)) != -1) {} // Coord waits for all its children to finish before it can clean up and finish on its own
 
-		while ((pid = wait(&status)) != -1) // Coord waits for all its children to finish before it finishes
-		{
-
-			//call function to display return status of child with this pid
-			showReturnStatus(pid, status);			
-		}
 		delete[] initialDataSet; // Deleting this in the coord space
 
 		auto coordTimeEnd = chrono::system_clock::now();
