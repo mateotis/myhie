@@ -3,7 +3,7 @@
 
 #include <string>
 
-struct Taxpayer { // Struct that stores all our data - we don't need a class as you don't really modify this data, you just sort it
+struct Taxpayer { // Struct that stores all our data - we don't need a class as we don't really modify this data, we just sort it
 	int rid;
 	std::string firstName;
 	std::string lastName;

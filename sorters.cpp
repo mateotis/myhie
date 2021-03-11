@@ -31,8 +31,6 @@ void insertionSort(Taxpayer dataSet[], int n, int attrNum, string sortOrder, int
 					dataSet[insertPos] = currentEntry; // This moves the whole struct, without having to move members separately, quite efficient
 					insertCount++;
 				}
-
-				//cout << "Worker #" << workerNum << " insertion sort sorted this many entries: " << i+1 << endl;
 			}
 		}
 		else { // Sort in descending order - essentially the same algorithm, just with a flipped relation check
@@ -329,10 +327,6 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 
 	// As with the other sorting algos in this file, we need to have a version for every potential order-attribute combination
 
-/*	for(int i = 0; i < lineCount; i++) {
-		cout << i << " " << partSortedData[i].rid << endl;
-	}*/
-
 	if(attrNum == 0) { // Sorting by RID
 		if(sortOrder == "ascending") {
 			int currentMin = 9999999;
@@ -348,8 +342,6 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 					else if(workerIterators[j] > workerRangeStarts[j+1] - workerRangeStarts[j] - 1) { // If the iterator for any sub-array reaches its range (given by range end - range start - 1), skip as we are done with that sub-array
 						continue;
 					}
-					
-					//cout << "Comparing " << partSortedData[workerRangeStarts[j] + workerIterators[j]].rid << " at index " << workerRangeStarts[j] + workerIterators[j] << " in worker #" << j << " with " << currentMin << endl;
 
 					if(partSortedData[workerRangeStarts[j] + workerIterators[j]].rid < currentMin) { // If you remember, we did the same indexing when we first assembled partSortedData - adding the starting point of the worker to the current position of the iterator - except back there the iterator was just i, here it's a whole array of them!
 						currentTaxpayer = partSortedData[workerRangeStarts[j] + workerIterators[j]];
@@ -360,7 +352,6 @@ void merge(Taxpayer partSortedData[], int workerRangeStarts[], int workerNum, in
 
 				finalSortedData[i] = currentTaxpayer;
 				workerIterators[currentMinWorker]++; // Advance the iterator of the sub-array where we found the right element, to ensure that we don't consider it again
-				//cout << "Iterator for worker #" << currentMinWorker << " at: " << workerIterators[currentMinWorker] << endl;
 
 				currentMin = 9999999;
 				currentMinWorker = 0;

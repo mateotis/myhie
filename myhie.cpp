@@ -1,14 +1,12 @@
 #include <iostream> // For cout
 #include <fstream> // For file I/O
 #include <cstring> // For strcmp() and strcpy() when we're using exec and read/write
-//#include <cstdio> // For read/write
 #include <cstdlib> // For rand() and srand(), generating our random ranges
 #include <ctime> // For seeding srand() with time()
 #include <unistd.h> // For read/write and IPC
 #include <sys/wait.h> // For wait() and signals
 #include <fcntl.h> // For pipe flags
 #include <sys/stat.h> // For mkfifo(), creating named pipes
-//#include <sys/types.h>
 #include <chrono> // For time-keeping
 
 #include "sorters.h"
@@ -212,7 +210,6 @@ int main(int argc, char* args[]) {
 	signal(SIGUSR2, signalHandler);
 
 	// Creating the coordinator node and sending it info
-	int fd[2];
 	pid_t pid;
 	pid = fork(); // First we fork it
 	if(pid < 0) { // Error handling
@@ -403,7 +400,7 @@ int main(int argc, char* args[]) {
 			for(int j = 0; j < workerNum; j++) { // Letting each worker have their pass at the pipe
 
 				fd1 = open("intfifo",O_RDONLY); // This will block until at least one of the workers is ready to write, but that's okay and it actually helps us maintain sync
-				kill(pidArray[j], SIGCONT); // We overload the SIGCONT signal to do what we want as SIGUSR1 and 2 are in use for other, required reasons - besides, it makes sense that we'd use SIGCONT to tell the worker that it can proceed 
+				kill(pidArray[j], SIGCONT); // We overload the SIGCONT signal to do what we want as SIGUSR1 and 2 are in use for other, required reasons - besides, it makes sense that we'd use SIGCONT to tell the worker that it can proceed  writing to the pipe
 
 				for(int i = 0; i < workerRanges[j][1] - workerRanges[j][0]+1; i++) { // For each worker, we *strictly* only read as much as it can write to us; that is, its range
 					read(fd1, &rid, sizeof(rid));
