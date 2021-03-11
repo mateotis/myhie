@@ -41,6 +41,7 @@ int main(int argc, char* args[]) {
 	int attrNum = 0;
 	bool randomRanges = false;
 	bool ascendingOrder = true; // If false, then we'll sort in a descending order, obviously
+	bool withoutStrings = false; // Extra option: since the string matcher can really bottleneck performance on larger files, the user can turn it off
 
 	auto rootTimeStart = chrono::system_clock::now(); // Using the auto type to avoid having to type long, library specific types
 
@@ -70,6 +71,9 @@ int main(int argc, char* args[]) {
 		}
 		else if(strcmp(args[i], "-s") == 0) {
 			outputFile = args[i+1];
+		}
+		else if(strcmp(args[i], "-ws") == 0) {
+			withoutStrings = true;
 		}
 	}
 
@@ -106,6 +110,12 @@ int main(int argc, char* args[]) {
 	}
 	else {
 		cout << "Sorting order: Ascending" << endl;
+	}
+	if(withoutStrings == true) {
+		cout << "Skip string matcher: Yes" << endl;
+	}
+	else {
+		cout << "Skip string matcher: No" << endl;
 	}
 	cout << "\n" << endl;
 
@@ -421,15 +431,17 @@ int main(int argc, char* args[]) {
 
 			// Because the strings/char arrays really did not want to work well with the pipe, no matter how I sliced it, I decided to take a different approach - with the piping done and partSortedData assembled, we can cross-check the unique RIDs with the initialDataSet we parsed earlier to assign the missing string members before we start the merging process 
 
-			for(int i = 0; i < lineCount; i++) {
-				for(int j = 0; j < lineCount; j++) {
-					if(partSortedData[i].rid == initialDataSet[j].rid) { // Simple O(n^2) matching - it makes for a  bottleneck in program execution time, but it ensures stable and accurate data output
-						partSortedData[i].firstName = initialDataSet[j].firstName;
-						partSortedData[i].lastName = initialDataSet[j].lastName;
+			if(withoutStrings == false) {
+				for(int i = 0; i < lineCount; i++) {
+					for(int j = 0; j < lineCount; j++) {
+						if(partSortedData[i].rid == initialDataSet[j].rid) { // Simple O(n^2) matching - it makes for a  bottleneck in program execution time, but it ensures stable and accurate data output
+							partSortedData[i].firstName = initialDataSet[j].firstName;
+							partSortedData[i].lastName = initialDataSet[j].lastName;
+						}
 					}
+					cout << "Matching a name to each entry through the RID. Entries processed: " << i+1;
+					cout << "\r";
 				}
-				cout << "Matching a name to each entry through the RID. Entries processed: " << i+1;
-				cout << "\r";
 			}
 			cout << endl;
 
